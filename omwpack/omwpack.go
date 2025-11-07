@@ -1,5 +1,6 @@
 // Package omwpack bundles up omwscripts files into omwaddon files or vice versa.
 // See https://en.uesp.net/wiki/Morrowind_Mod:Mod_File_Format
+// See https://github.com/OpenMW/openmw/blob/39d117e362808dc13cd411debcb48e363e11639c/components/esm/luascripts.cpp#L16
 package omwpack
 
 import (
@@ -127,6 +128,8 @@ func buildLUAL(pairs []pair) ([]byte, error) {
 		if err := writeSubrecord(buf, "LUAS", []byte(p.path)); err != nil {
 			return nil, fmt.Errorf("write LUAS subrecord")
 		}
+		// the LUAF value is not a string.
+		// see https://github.com/OpenMW/openmw/blob/39d117e362808dc13cd411debcb48e363e11639c/components/esm/defs.hpp#L78
 		if err := writeSubrecord(buf, "LUAF", []byte(p.attach)); err != nil {
 			return nil, fmt.Errorf("write LUAF subrecord")
 		}
