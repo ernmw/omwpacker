@@ -1,4 +1,5 @@
 // Package omwpack bundles up omwscripts files into omwaddon files or vice versa.
+// See https://en.uesp.net/wiki/Morrowind_Mod:Mod_File_Format
 package omwpack
 
 import (
@@ -23,7 +24,7 @@ type pair struct {
 //	If provided and that file contains a LUAL record, the function will replace that LUAL
 //	record with the newly created one, preserving the template's TES3 header and other data.
 //	If empty, the function emits a minimal TES3 header + new LUAL record.
-func PackageOmwScripts(inScriptsPath, outAddonPath, templateESPPath string) error {
+func PackageOmwScripts(inScriptsPath, outAddonPath string) error {
 	// 1) Read and parse input scripts text file
 	b, err := os.ReadFile(inScriptsPath)
 	if err != nil {
@@ -55,28 +56,9 @@ func PackageOmwScripts(inScriptsPath, outAddonPath, templateESPPath string) erro
 	}
 
 	// 2) Build the LUAL record bytes
-	lual := buildLUAL(pairs)
-
-	if templateESPPath != "" {
-		// Read template and replace existing LUAL if present; otherwise append new LUAL
-		tpl, err := os.ReadFile(templateESPPath)
-		if err != nil {
-			return fmt.Errorf("read template esp: %w", err)
-		}
-		newBytes, replaced, err := replaceOrAppendLUAL(tpl, lual)
-		if err != nil {
-			return fmt.Errorf("process template: %w", err)
-		}
-		if !replaced {
-			// we appended; but we also must update TES3 record size at file start if needed.
-			// replaceOrAppendLUAL appends LUAL but leaves TES3 header size as-is; instead,
-			// to be conservative, we will write full newBytes as-is — most templates already
-			// contain correct TES3 header for their content.
-		}
-		if err := os.WriteFile(outAddonPath, newBytes, 0644); err != nil {
-			return fmt.Errorf("write out file: %w", err)
-		}
-		return nil
+	lual, err := buildLUAL(pairs)
+	if err != nil {
+		return fmt.Errorf("build LUAL record: %w", err)
 	}
 
 	// 3) No template: create minimal TES3 wrapper and put new LUAL inside
@@ -108,20 +90,30 @@ func PackageOmwScripts(inScriptsPath, outAddonPath, templateESPPath string) erro
 }
 
 // buildLUAL constructs a LUAL record (bytes) from pairs.
-func buildLUAL(pairs []pair) []byte {
+func buildLUAL(pairs []pair) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 
 	// LUAL header
 	buf.WriteString("LUAL")
-	_ = binary.Write(buf, binary.LittleEndian, uint32(0)) // placeholder record size
+	err := binary.Write(buf, binary.LittleEndian, uint32(0)) // placeholder record size
+	if err != nil {
+		return nil, fmt.Errorf("write LUAL header")
+	}
 
-	// 8 bytes of flags/padding (observed in reference .esp)
-	buf.Write(make([]byte, 8))
+	// reserve spot for size
+	_, err = buf.Write(make([]byte, 4))
+	if err != nil {
+		return nil, fmt.Errorf("write flag padding")
+	}
 
 	// Each pair: LUAS (path) then LUAF (attach)
 	for _, p := range pairs {
-		writeSubrecord(buf, "LUAS", []byte(p.path))
-		writeSubrecord(buf, "LUAF", []byte(p.attach))
+		if err := writeSubrecord(buf, "LUAS", []byte(p.path)); err != nil {
+			return nil, fmt.Errorf("write LUAS subrecord")
+		}
+		if err := writeSubrecord(buf, "LUAF", []byte(p.attach)); err != nil {
+			return nil, fmt.Errorf("write LUAF subrecord")
+		}
 	}
 
 	// patch size
@@ -129,21 +121,26 @@ func buildLUAL(pairs []pair) []byte {
 	// size is everything after the 8 byte header (4 id + 4 size), i.e., len(out) - 8
 	recSize := uint32(len(out) - 8)
 	binary.LittleEndian.PutUint32(out[4:], recSize)
-	return out
+	return out, nil
 }
 
-func writeSubrecord(w io.Writer, id string, data []byte) {
+func writeSubrecord(w io.Writer, id string, data []byte) error {
 	// id (4 bytes)
-	_ = writeBytes(w, []byte(id))
+	_, err := w.Write([]byte(id))
+	if err != nil {
+		return fmt.Errorf("write subrecord type")
+	}
 	// size (uint32)
-	_ = binary.Write(w, binary.LittleEndian, uint32(len(data)))
+	err = binary.Write(w, binary.LittleEndian, uint32(len(data)))
+	if err != nil {
+		return fmt.Errorf("write subrecord length")
+	}
 	// payload
-	_, _ = w.Write(data)
-}
-
-func writeBytes(w io.Writer, b []byte) error {
-	_, err := w.Write(b)
-	return err
+	_, err = w.Write(data)
+	if err != nil {
+		return fmt.Errorf("write subrecord data")
+	}
+	return nil
 }
 
 // replaceOrAppendLUAL searches for the first LUAL record in tpl bytes.

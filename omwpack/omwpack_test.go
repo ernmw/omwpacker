@@ -28,7 +28,7 @@ GLOBAL: scripts/s3/music/staticCollection.lua
 
 	outFile := filepath.Join(tmpDir, "out.omwaddon")
 
-	err := PackageOmwScripts(inFile, outFile, template)
+	err := PackageOmwScripts(inFile, outFile)
 	if err != nil {
 		t.Fatalf("PackageOmwScripts failed: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestExtractOmwScripts(t *testing.T) {
 	// First pack some data
 	in := filepath.Join(tmp, "input.omwscripts")
 	os.WriteFile(in, []byte("PLAYER: scripts/foo.lua\nGLOBAL: scripts/bar.lua\n"), 0644)
-	if err := PackageOmwScripts(in, addon, "testdata/expected.esp"); err != nil {
+	if err := PackageOmwScripts(in, addon); err != nil {
 		t.Fatal(err)
 	}
 

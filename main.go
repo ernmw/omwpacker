@@ -31,9 +31,7 @@ func main() {
 		}
 		fmt.Printf("Packing %s → %s\n", inPath, outPath)
 
-		// If you have a default ESP template, specify it here, e.g.:
-		template := "" // or "S3maphore.esp"
-		if err := omwpack.PackageOmwScripts(inPath, outPath, template); err != nil {
+		if err := omwpack.PackageOmwScripts(inPath, outPath); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
