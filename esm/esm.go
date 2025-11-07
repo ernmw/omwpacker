@@ -4,8 +4,10 @@ package esm
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -189,4 +191,36 @@ func ParsePluginData(pluginName string, f io.ReadSeeker) ([]*Record, error) {
 		records = append(records, rec)
 	}
 	return records, nil
+}
+
+func writePaddedString(out *bytes.Buffer, s []byte, size int) error {
+	if len(s) > size {
+		return errors.New("string too big")
+	}
+	if _, err := out.Write(s); err != nil {
+		return err
+	}
+	if _, err := out.Write(make([]byte, size-len(s))); err != nil {
+		return err
+	}
+	return nil
+}
+
+func readPaddedString(raw []byte) string {
+	nullIndex := bytes.IndexByte(raw, 0)
+	if nullIndex < 0 {
+		return ""
+	}
+	return string(raw[:nullIndex])
+}
+
+func bytesToFloat32(bytes []byte) float32 {
+	return math.Float32frombits(binary.LittleEndian.Uint32(bytes))
+}
+
+func float32ToBytes(float float32) []byte {
+	bits := math.Float32bits(float)
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint32(bytes, bits)
+	return bytes
 }
