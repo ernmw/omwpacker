@@ -1,4 +1,4 @@
-// omwpack/package.go
+// Package omwpack bundles up omwscripts files into omwaddon files or vice versa.
 package omwpack
 
 import (

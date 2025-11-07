@@ -1,11 +1,10 @@
-// omwpack/package_test.go
-package omwpack_test
+package omwpack
 
 import (
-	"_/home/ern/workspace/omwpacker/omwpack"
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -29,7 +28,7 @@ GLOBAL: scripts/s3/music/staticCollection.lua
 
 	outFile := filepath.Join(tmpDir, "out.omwaddon")
 
-	err := omwpack.PackageOmwScripts(inFile, outFile, template)
+	err := PackageOmwScripts(inFile, outFile, template)
 	if err != nil {
 		t.Fatalf("PackageOmwScripts failed: %v", err)
 	}
@@ -59,4 +58,27 @@ GLOBAL: scripts/s3/music/staticCollection.lua
 	}
 
 	t.Logf("Output .omwaddon written to %s (%d bytes)", outFile, len(data))
+}
+
+func TestExtractOmwScripts(t *testing.T) {
+	tmp := t.TempDir()
+	addon := filepath.Join(tmp, "input.omwaddon")
+	scripts := filepath.Join(tmp, "out.omwscripts")
+
+	// First pack some data
+	in := filepath.Join(tmp, "input.omwscripts")
+	os.WriteFile(in, []byte("PLAYER: scripts/foo.lua\nGLOBAL: scripts/bar.lua\n"), 0644)
+	if err := PackageOmwScripts(in, addon, "testdata/expected.esp"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ExtractOmwScripts(addon, scripts); err != nil {
+		t.Fatal(err)
+	}
+
+	out, _ := os.ReadFile(scripts)
+	txt := string(out)
+	if !strings.Contains(txt, "PLAYER:") || !strings.Contains(txt, "GLOBAL:") {
+		t.Errorf("unexpected output:\n%s", txt)
+	}
 }
