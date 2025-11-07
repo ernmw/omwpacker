@@ -5,6 +5,7 @@ package omwpack
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,19 @@ import (
 type pair struct {
 	path   string // LUAS
 	attach string // LUAF
+}
+
+func writePaddedString(out *bytes.Buffer, s []byte, size int) error {
+	if len(s) > size {
+		return errors.New("string too big")
+	}
+	if _, err := out.Write(s); err != nil {
+		return err
+	}
+	if _, err := out.Write(make([]byte, size-len(s))); err != nil {
+		return err
+	}
+	return nil
 }
 
 // PackageOmwScripts reads a textual .omwscripts file and writes an .omwaddon file.
@@ -68,12 +82,14 @@ func PackageOmwScripts(inScriptsPath, outAddonPath string) error {
 	_ = binary.Write(out, binary.LittleEndian, uint32(0)) // placeholder for TES3 size
 
 	// Minimal HEDR subrecord (common in Morrowind TES3):
-	// HEDR: version(float32) + numRecords(uint32) + nextObjectID(uint32)
+	// https://en.uesp.net/wiki/Morrowind_Mod:Mod_File_Format/TES3
 	out.WriteString("HEDR")
-	_ = binary.Write(out, binary.LittleEndian, uint32(12))   // size
-	_ = binary.Write(out, binary.LittleEndian, float32(1.0)) // version
-	_ = binary.Write(out, binary.LittleEndian, uint32(0))    // numRecords (unknown/0)
-	_ = binary.Write(out, binary.LittleEndian, uint32(0))    // nextObjectID (0)
+	_ = binary.Write(out, binary.LittleEndian, uint32(300))      // size
+	_ = binary.Write(out, binary.LittleEndian, float32(1.0))     // version
+	_ = binary.Write(out, binary.LittleEndian, uint32(0))        // flags
+	_ = writePaddedString(out, []byte("omwpack"), 32)            // company name
+	_ = writePaddedString(out, []byte("omwscrips package"), 256) // file desc
+	_ = binary.Write(out, binary.LittleEndian, uint32(1))        // num records
 
 	// Append our LUAL
 	out.Write(lual)
@@ -141,33 +157,4 @@ func writeSubrecord(w io.Writer, id string, data []byte) error {
 		return fmt.Errorf("write subrecord data")
 	}
 	return nil
-}
-
-// replaceOrAppendLUAL searches for the first LUAL record in tpl bytes.
-// If found, it replaces that LUAL record with newLual and returns (newBytes, true, nil).
-// If not found, it appends newLual to the end and returns (newBytes, false, nil).
-// This function does minimal parsing: it finds the ASCII "LUAL", reads the uint32 size
-// after that, and computes end offset = pos + 8 + size. If parsing fails, we append.
-func replaceOrAppendLUAL(tpl, newLual []byte) (out []byte, replaced bool, err error) {
-	pos := bytes.Index(tpl, []byte("LUAL"))
-	if pos < 0 {
-		// not found -> append
-		return append([]byte{}, append(tpl, newLual...)...), false, nil
-	}
-	if pos+8 > len(tpl) {
-		// malformed -> append
-		return append([]byte{}, append(tpl, newLual...)...), false, nil
-	}
-	size := binary.LittleEndian.Uint32(tpl[pos+4 : pos+8])
-	end := int(pos) + 8 + int(size)
-	if end > len(tpl) {
-		// malformed -> append
-		return append([]byte{}, append(tpl, newLual...)...), false, nil
-	}
-	// Build new file: everything up to pos, then newLual, then everything after end
-	out = make([]byte, 0, len(tpl)-(end-pos)+len(newLual))
-	out = append(out, tpl[:pos]...)
-	out = append(out, newLual...)
-	out = append(out, tpl[end:]...)
-	return out, true, nil
 }
