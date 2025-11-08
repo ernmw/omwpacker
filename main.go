@@ -106,7 +106,7 @@ func main() {
 		fmt.Printf("Packing %s → %s\n", inPath, outPath)
 		err := pack(inPath, outPath)
 		if err != nil {
-			fmt.Println("💀 Failed: ", outPath)
+			fmt.Println("💀 Failed: %v", err)
 			os.Exit(1)
 		}
 

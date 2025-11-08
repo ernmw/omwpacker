@@ -43,9 +43,9 @@ func (h *LUAFdata) Unmarshal(sub *Subrecord) error {
 
 func (h *LUAFdata) Marshal() (*Subrecord, error) {
 	// make sure NPC gets written as NPC_.
-	outTag := h.Target + strings.Repeat("_", 4-len(h.Target))
+	outTag := h.Target + strings.Repeat("_", 4-min(4, len(h.Target)))
 	buff := new(bytes.Buffer)
-	if err := writePaddedString(buff, []byte(outTag), 4); err != nil {
+	if err := writePaddedString(buff, []byte(outTag[:4]), 4); err != nil {
 		return nil, err
 	}
 	return &Subrecord{Tag: h.Tag(), Data: buff.Bytes()}, nil
