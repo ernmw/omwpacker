@@ -10,7 +10,7 @@ import (
 
 	"github.com/ernmw/omwpacker/esm"
 	"github.com/ernmw/omwpacker/esm/tags"
-	"github.com/ernmw/omwpacker/omwpack"
+	"github.com/ernmw/omwpacker/omwscripts"
 )
 
 func fileExists(path string) bool {
@@ -53,8 +53,9 @@ func main() {
 			outRecords, err = esm.ParsePluginFile(outPath)
 			if err != nil {
 				fmt.Printf("Failed to parse %q: %v", outPath, err)
+				os.Exit(1)
 			}
-			// delete existing records
+			// delete existing luaf/luas subrecords
 			for _, rec := range outRecords {
 				if rec.Tag == tags.LUAL {
 					rec.Subrecords = slices.DeleteFunc(rec.Subrecords, func(e *esm.Subrecord) bool {
@@ -67,28 +68,50 @@ func main() {
 			firstRec, err := esm.NewTES3Record("", "Made with https://github.com/ernmw/omwpacker/")
 			if err != nil {
 				fmt.Printf("Failed to make empty recs: %v", err)
+				os.Exit(1)
 			}
 			outRecords = []*esm.Record{firstRec}
 		}
 
-		if err := omwpack.PackageOmwScripts(inPath, outPath); err != nil {
-			fmt.Fprintln(os.Stderr, "Error:", err)
+		inContents, err := os.ReadFile(inPath)
+		if err != nil {
+			fmt.Printf("Failed to read input file: %v", err)
+			os.Exit(1)
+		}
+		subRecs, err := omwscripts.Package(string(inContents))
+		if err != nil {
+			fmt.Printf("Failed to read file %q: %v", inPath, err)
+			os.Exit(1)
+		}
+
+		found := false
+		for _, rec := range outRecords {
+			if rec.Tag == tags.LUAL {
+				found = true
+				rec.Subrecords = append(rec.Subrecords, subRecs...)
+			}
+		}
+		if !found {
+			// make new lual
+			outRecords = append(outRecords, &esm.Record{
+				Tag:        tags.LUAL,
+				Subrecords: subRecs,
+			})
+		}
+		writeOut, err := os.Create(outPath)
+		if err != nil {
+			fmt.Printf("Failed to read file %q: %v", inPath, err)
+			os.Exit(1)
+		}
+		if err := esm.WriteRecords(writeOut, slices.Values(outRecords)); err != nil {
+			fmt.Printf("Failed to write file %q: %v", outPath, err)
 			os.Exit(1)
 		}
 		fmt.Println("✓ Created", outPath)
 
 	case ".omwaddon", ".esp":
-		// Convert addon → text
-		if outPath == "" {
-			outPath = strings.TrimSuffix(inPath, ext) + ".omwscripts"
-		}
-		fmt.Printf("Extracting %s → %s\n", inPath, outPath)
-
-		if err := omwpack.ExtractOmwScripts(inPath, outPath); err != nil {
-			fmt.Fprintln(os.Stderr, "Error:", err)
-			os.Exit(1)
-		}
-		fmt.Println("✓ Created", outPath)
+		fmt.Println("not implemented yet")
+		os.Exit(1)
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported file extension: %s\n", ext)

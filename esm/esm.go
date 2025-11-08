@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"math"
 	"os"
 	"path/filepath"
@@ -255,6 +256,15 @@ func float32ToBytes(float float32) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint32(bytes, bits)
 	return bytes
+}
+
+func WriteRecords(w io.Writer, recs iter.Seq[*Record]) error {
+	for rec := range recs {
+		if err := rec.Write(w); err != nil {
+			return fmt.Errorf("write %q record: %w", rec.Tag, err)
+		}
+	}
+	return nil
 }
 
 func NewTES3Record(name string, description string) (*Record, error) {
