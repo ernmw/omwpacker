@@ -38,7 +38,7 @@ func TestLUAF(t *testing.T) {
 
 func TestLUAS(t *testing.T) {
 	h := &LUASdata{
-		Path: "some/path/to/script.lua",
+		Value: "some/path/to/script.lua",
 	}
 	raw, err := h.Marshal()
 	require.NoError(t, err)
@@ -46,5 +46,5 @@ func TestLUAS(t *testing.T) {
 
 	h2 := &LUASdata{}
 	require.NoError(t, raw.Unmarshal(h2))
-	require.Equal(t, "some/path/to/script.lua", h2.Path)
+	require.Equal(t, "some/path/to/script.lua", h2.Value)
 }

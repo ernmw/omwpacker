@@ -5,11 +5,23 @@ import (
 	"github.com/ernmw/omwpacker/esm/record"
 )
 
+type frmrTagger struct{}
+
+func (t *frmrTagger) Tag() esm.SubrecordTag { return "FRMR" }
+
+type FRMRdata = record.Uint32Subrecord[*frmrTagger]
+
 type anamTagger struct{}
 
 func (t *anamTagger) Tag() esm.SubrecordTag { return "ANAM" }
 
 type ANAMdata = record.ZstringSubrecord[*anamTagger]
+
+type unamTagger struct{}
+
+func (t *unamTagger) Tag() esm.SubrecordTag { return "UNAM" }
+
+type UNAMdata = record.Uint8Subrecord[*anamTagger]
 
 // References to objects in cells are listed as part of the cell data, each beginning with FRMR and NAME fields, followed by a list of fields specific to the object type.
 type FormReference struct {

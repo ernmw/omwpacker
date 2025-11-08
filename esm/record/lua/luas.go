@@ -1,9 +1,8 @@
 package lua
 
 import (
-	"bytes"
-
 	"github.com/ernmw/omwpacker/esm"
+	"github.com/ernmw/omwpacker/esm/record"
 )
 
 // https://gitlab.com/OpenMW/openmw/-/blob/master/components/lua/serialization.cpp
@@ -23,27 +22,9 @@ import (
  // LUAC - Name of a timer callback (string)
 */
 
+type luasTagger struct{}
+
+func (t *luasTagger) Tag() esm.SubrecordTag { return "LUAS" }
+
 // LUASdata is the script path.
-type LUASdata struct {
-	Path string
-}
-
-func (h *LUASdata) Tag() esm.SubrecordTag {
-	return LUAS
-}
-
-func (h *LUASdata) Unmarshal(sub *esm.Subrecord) error {
-	if h == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	h.Path = string(sub.Data)
-	return nil
-}
-
-func (h *LUASdata) Marshal() (*esm.Subrecord, error) {
-	buff := new(bytes.Buffer)
-	if _, err := buff.WriteString(h.Path); err != nil {
-		return nil, err
-	}
-	return &esm.Subrecord{Tag: h.Tag(), Data: buff.Bytes()}, nil
-}
+type LUASdata = record.ZstringSubrecord[*luasTagger]

@@ -186,31 +186,6 @@ func (s *AMBIdata) Marshal() (*esm.Subrecord, error) {
 	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
 }
 
-// ========== Subrecord: FRMR ==========
-// Reference ID (always uint32)
-type FRMRdata struct {
-	ReferenceID uint32
-}
-
-func (s *FRMRdata) Tag() esm.SubrecordTag { return FRMR }
-
-func (s *FRMRdata) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	if len(sub.Data) < 4 {
-		return fmt.Errorf("CELL.FRMR too short: %d < 4", len(sub.Data))
-	}
-	s.ReferenceID = binary.LittleEndian.Uint32(sub.Data[0:4])
-	return nil
-}
-
-func (s *FRMRdata) Marshal() (*esm.Subrecord, error) {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, s.ReferenceID)
-	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
-}
-
 // ========== Subrecord: MVRF ==========
 // Moved Reference ID (always uint32)
 type MVRFdata struct {
@@ -249,7 +224,8 @@ func ParseCELL(subs []*esm.Subrecord) (*CellRecord, error) {
 		PersistentChildren: []*FormReference{},
 		TemporaryChildren:  []*FormReference{},
 	}
-	for _, sub := range subs {
+	for i := 0; i < len(subs); i++ {
+		sub := subs[i]
 		switch sub.Tag {
 		case NAME:
 			s := &NAMEdata{}
