@@ -27,19 +27,22 @@ func TestHeader(t *testing.T) {
 
 func TestLUAF(t *testing.T) {
 	h := &LUAFdata{
-		Target: "CREA",
+		Flags:   0,
+		Targets: []string{"CREA", "DOOR"},
 	}
 	raw, err := h.Marshal()
 	require.NoError(t, err)
-	require.True(t, bytes.Contains(raw.Data, []byte("CREA")))
+	require.True(t, bytes.Contains(raw.Data, []byte("CREADOOR")))
 
 	h2 := &LUAFdata{}
 	require.NoError(t, raw.Unmarshal(h2))
-	require.Equal(t, "CREA", h2.Target)
+	require.Equal(t, "CREA", h2.Targets[0])
+	require.Equal(t, "DOOR", h2.Targets[1])
 
 	t.Run("short tag", func(t *testing.T) {
 		h := &LUAFdata{
-			Target: "NPC",
+			Flags:   0,
+			Targets: []string{"NPC"},
 		}
 		raw, err := h.Marshal()
 		require.NoError(t, err)
@@ -47,7 +50,7 @@ func TestLUAF(t *testing.T) {
 
 		h2 := &LUAFdata{}
 		require.NoError(t, raw.Unmarshal(h2))
-		require.Equal(t, "NPC_", h2.Target)
+		require.Equal(t, "NPC_", h2.Targets[0])
 	})
 }
 

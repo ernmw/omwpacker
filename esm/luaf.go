@@ -2,6 +2,7 @@ package esm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"strings"
 
 	"github.com/ernmw/omwpacker/esm/tags"
@@ -25,8 +26,23 @@ import (
 */
 
 // LUAFdata is the thing the script is attached to.
+// https://gitlab.com/OpenMW/openmw/-/blob/master/components/esm/luascripts.cpp#L62
 type LUAFdata struct {
-	Target string
+	// Flags cover types of script attachment which don't logically correlate to a type of gameobject -> Player, Global, Custom, Menu, etc.
+	// Player is one of them, since they are an NPC.
+	//
+	// sGlobal = 1ull << 0; // start as a global script
+	//
+	// sCustom = 1ull << 1; // local; can be attached/detached by a global script
+	//
+	// sPlayer = 1ull << 2; // auto attach to players
+	//
+	// sMerge = 1ull << 3; // merge with configuration from previous content files
+	//
+	// sMenu = 1ull << 4; // start as a menu script
+	Flags uint32
+	// Targets is a list of 4-byte strings which map to ccfour constants.
+	Targets []string
 }
 
 func (h *LUAFdata) Tag() tags.SubrecordTag {
@@ -37,16 +53,27 @@ func (h *LUAFdata) Unmarshal(sub *Subrecord) error {
 	if h == nil || sub == nil {
 		return ErrArgumentNil
 	}
-	h.Target = readPaddedString(sub.Data[0:4])
+	h.Flags = binary.LittleEndian.Uint32(sub.Data[0:4])
+
+	rawTargets := readPaddedString(sub.Data[4:])
+	h.Targets = make([]string, len(rawTargets)/4)
+	for i := 0; i < len(rawTargets); i = i + 4 {
+		h.Targets[i/4] = rawTargets[i : i+4]
+	}
+
 	return nil
 }
 
 func (h *LUAFdata) Marshal() (*Subrecord, error) {
-	// make sure NPC gets written as NPC_.
-	outTag := h.Target + strings.Repeat("_", 4-min(4, len(h.Target)))
 	buff := new(bytes.Buffer)
-	if err := writePaddedString(buff, []byte(outTag[:4]), 4); err != nil {
+	if err := binary.Write(buff, binary.LittleEndian, h.Flags); err != nil {
 		return nil, err
+	}
+	for _, target := range h.Targets {
+		outTag := target + strings.Repeat("_", 4-min(4, len(target)))
+		if err := writePaddedString(buff, []byte(outTag), 4); err != nil {
+			return nil, err
+		}
 	}
 	return &Subrecord{Tag: h.Tag(), Data: buff.Bytes()}, nil
 }
