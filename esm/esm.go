@@ -11,12 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ernmw/omwpacker/esm/tags"
 )
 
 var ErrArgumentNil error
 var ErrTagMismatch error
 
-func newErrTagMismatch(expected SubrecordTag, got SubrecordTag) error {
+func newErrTagMismatch(expected tags.SubrecordTag, got tags.SubrecordTag) error {
 	if expected != got {
 		return fmt.Errorf("expected %q, got %q: %w", expected, got, ErrTagMismatch)
 	}
@@ -26,11 +28,11 @@ func newErrTagMismatch(expected SubrecordTag, got SubrecordTag) error {
 type ParsedSubrecord interface {
 	Unmarshal(sub *Subrecord) error
 	Marshal() (*Subrecord, error)
-	Tag() SubrecordTag
+	Tag() tags.SubrecordTag
 }
 
 type Subrecord struct {
-	Tag  SubrecordTag
+	Tag  tags.SubrecordTag
 	Data []byte
 }
 
@@ -64,10 +66,12 @@ func (s *Subrecord) Unmarshal(p ParsedSubrecord) error {
 
 type Record struct {
 	// tag, size, padding, flags
-	Tag          RecordTag
-	Flags        uint32
-	Subrecords   []*Subrecord
-	PluginName   string
+	Tag        tags.RecordTag
+	Flags      uint32
+	Subrecords []*Subrecord
+	// PluginName is just metadata; it is not written to the file.
+	PluginName string
+	// PluginOffset is just metadata; it is not written to the file.
 	PluginOffset int64
 }
 
@@ -132,7 +136,7 @@ func readNextRecord(pluginName string, f io.ReadSeeker) (*Record, error) {
 		PluginOffset: start,
 		PluginName:   pluginName,
 	}
-	rec.Tag = RecordTag(string(hdr[0:4]))
+	rec.Tag = tags.RecordTag(string(hdr[0:4]))
 	size := readUint32LE(hdr[4:8])
 	// hdr[8:12] are padding
 	rec.Flags = readUint32LE(hdr[12:16])
@@ -148,7 +152,7 @@ func readNextRecord(pluginName string, f io.ReadSeeker) (*Record, error) {
 		if _, err := io.ReadFull(f, subhdr); err != nil {
 			return nil, fmt.Errorf("read subrecord header for %q: %w", rec.Tag, err)
 		}
-		tag := SubrecordTag(string(subhdr[0:4]))
+		tag := tags.SubrecordTag(string(subhdr[0:4]))
 		size := readUint32LE(subhdr[4:8])
 		data := make([]byte, size)
 		if size > 0 {
@@ -162,7 +166,7 @@ func readNextRecord(pluginName string, f io.ReadSeeker) (*Record, error) {
 }
 
 // GetSubrecord returns the first subrecord with the matching tag.
-func (r *Record) GetSubrecord(tag SubrecordTag) *Subrecord {
+func (r *Record) GetSubrecord(tag tags.SubrecordTag) *Subrecord {
 	for _, s := range r.Subrecords {
 		if s.Tag == tag {
 			return s
@@ -184,7 +188,7 @@ func (r *Record) UpsertSubrecord(s *Subrecord) {
 }
 
 // DeleteSubrecord deletes the first subrecord with the matching tag.
-func (r *Record) DeleteSubrecord(tag SubrecordTag) {
+func (r *Record) DeleteSubrecord(tag tags.SubrecordTag) {
 	for i, ex := range r.Subrecords {
 		if ex.Tag == tag {
 			r.Subrecords = append(r.Subrecords[:i], r.Subrecords[i+1:]...)
@@ -251,4 +255,25 @@ func float32ToBytes(float float32) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint32(bytes, bits)
 	return bytes
+}
+
+func NewTES3Record(name string, description string) (*Record, error) {
+	// make new empty records
+	hedr := &HEDRdata{
+		Version:     1.3,
+		Flags:       0,
+		Name:        name,
+		Description: description,
+		NumRecords:  0,
+	}
+	hedrSubRec, err := hedr.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("Write HEDR subrecord: %w", err)
+	}
+	return &Record{
+		Tag: tags.TES3,
+		Subrecords: []*Subrecord{
+			hedrSubRec,
+		},
+	}, nil
 }

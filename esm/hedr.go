@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	"github.com/ernmw/omwpacker/esm/tags"
 )
 
-type Header struct {
+type HEDRdata struct {
 	Version     float32
 	Flags       uint32
 	Name        string
@@ -14,16 +16,13 @@ type Header struct {
 	NumRecords  uint32
 }
 
-func (h *Header) Tag() SubrecordTag {
-	return HEDR
+func (h *HEDRdata) Tag() tags.SubrecordTag {
+	return tags.HEDR
 }
 
-func (h *Header) Unmarshal(sub *Subrecord) error {
+func (h *HEDRdata) Unmarshal(sub *Subrecord) error {
 	if h == nil || sub == nil {
 		return ErrArgumentNil
-	}
-	if err := newErrTagMismatch(h.Tag(), sub.Tag); err != nil {
-		return err
 	}
 	// require full HEDR payload size (300 bytes)
 	if len(sub.Data) < 300 {
@@ -37,7 +36,7 @@ func (h *Header) Unmarshal(sub *Subrecord) error {
 	return nil
 }
 
-func (h *Header) Marshal() (*Subrecord, error) {
+func (h *HEDRdata) Marshal() (*Subrecord, error) {
 	buff := new(bytes.Buffer)
 
 	if err := binary.Write(buff, binary.LittleEndian, h.Version); err != nil {

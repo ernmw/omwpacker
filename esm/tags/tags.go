@@ -1,4 +1,4 @@
-package esm
+package tags
 
 // RecordTag identifies the type of record.
 // See https://github.com/OpenMW/openmw/blob/39d117e362808dc13cd411debcb48e363e11639c/components/esm/defs.hpp#L78
@@ -164,4 +164,11 @@ const (
 	MAST SubrecordTag = "MAST"
 	// Size of the previous master file in bytes (used for version tracking of plugin)
 	DATA SubrecordTag = "DATA"
+
+	LUAF SubrecordTag = "LUAF"
+	LUAW SubrecordTag = "LUAW"
+	LUAS SubrecordTag = "LUAS"
+	LUAD SubrecordTag = "LUAD"
+	LUAT SubrecordTag = "LUAT"
+	LUAC SubrecordTag = "LUAC"
 )

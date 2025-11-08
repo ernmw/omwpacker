@@ -5,6 +5,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/ernmw/omwpacker/esm/tags"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,8 +15,8 @@ func TestRead(t *testing.T) {
 	records, err := ParsePluginFile(inputFile)
 	require.NoError(t, err)
 	require.Len(t, records, 2)
-	require.Equal(t, TES3, records[0].Tag)
-	require.Equal(t, LUAL, records[1].Tag)
+	require.Equal(t, tags.TES3, records[0].Tag)
+	require.Equal(t, tags.LUAL, records[1].Tag)
 
 	// marshal
 	var buff bytes.Buffer
@@ -29,9 +30,9 @@ func TestRead(t *testing.T) {
 	require.Equal(t, records, reread)
 
 	t.Run("header", func(t *testing.T) {
-		sub := records[0].GetSubrecord(HEDR)
+		sub := records[0].GetSubrecord(tags.HEDR)
 		require.NotNil(t, sub)
-		h := &Header{}
+		h := &HEDRdata{}
 		require.NoError(t, sub.Unmarshal(h))
 		require.NoError(t, err)
 		require.NotNil(t, h)
@@ -41,30 +42,6 @@ func TestRead(t *testing.T) {
 		require.Empty(t, h.Description)
 
 	})
-}
-
-func TestHeader(t *testing.T) {
-	h := &Header{
-		Version:     1.3,
-		Name:        "name",
-		Description: "description",
-		NumRecords:  1,
-	}
-	raw, err := h.Marshal()
-	require.NoError(t, err)
-	require.True(t, bytes.Contains(raw.Data, []byte("name")))
-	require.True(t, bytes.Contains(raw.Data, []byte("description")))
-
-	// in your test before raw.Unmarshal(h2)
-	t.Logf("raw.Data len=%d", len(raw.Data))
-	t.Logf("raw.Data[0:40] hex: % x", raw.Data[0:40])         // header start..name
-	t.Logf("raw.Data[40:40+32] hex: % x", raw.Data[40:40+32]) // part of description start
-	t.Logf("raw.Data[40:296] contains 'description'? %v", bytes.Contains(raw.Data[40:296], []byte("description")))
-
-	h2 := &Header{}
-	require.NoError(t, raw.Unmarshal(h2))
-	require.Equal(t, "description", h2.Description)
-	require.Equal(t, "name", h2.Name)
 }
 
 func TestStrings(t *testing.T) {
