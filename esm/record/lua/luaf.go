@@ -1,11 +1,12 @@
-package esm
+package lua
 
 import (
 	"bytes"
 	"encoding/binary"
 	"strings"
 
-	"github.com/ernmw/omwpacker/esm/tags"
+	"github.com/ernmw/omwpacker/esm"
+	"github.com/ernmw/omwpacker/esm/internal/util"
 )
 
 // https://gitlab.com/OpenMW/openmw/-/blob/master/components/lua/serialization.cpp
@@ -45,17 +46,17 @@ type LUAFdata struct {
 	Targets []string
 }
 
-func (h *LUAFdata) Tag() tags.SubrecordTag {
-	return tags.LUAF
+func (h *LUAFdata) Tag() esm.SubrecordTag {
+	return LUAF
 }
 
-func (h *LUAFdata) Unmarshal(sub *Subrecord) error {
+func (h *LUAFdata) Unmarshal(sub *esm.Subrecord) error {
 	if h == nil || sub == nil {
-		return ErrArgumentNil
+		return esm.ErrArgumentNil
 	}
 	h.Flags = binary.LittleEndian.Uint32(sub.Data[0:4])
 
-	rawTargets := readPaddedString(sub.Data[4:])
+	rawTargets := util.ReadPaddedString(sub.Data[4:])
 	h.Targets = make([]string, len(rawTargets)/4)
 	for i := 0; i < len(rawTargets); i = i + 4 {
 		h.Targets[i/4] = rawTargets[i : i+4]
@@ -64,16 +65,16 @@ func (h *LUAFdata) Unmarshal(sub *Subrecord) error {
 	return nil
 }
 
-func (h *LUAFdata) Marshal() (*Subrecord, error) {
+func (h *LUAFdata) Marshal() (*esm.Subrecord, error) {
 	buff := new(bytes.Buffer)
 	if err := binary.Write(buff, binary.LittleEndian, h.Flags); err != nil {
 		return nil, err
 	}
 	for _, target := range h.Targets {
 		outTag := target + strings.Repeat("_", 4-min(4, len(target)))
-		if err := writePaddedString(buff, []byte(outTag), 4); err != nil {
+		if err := util.WritePaddedString(buff, []byte(outTag), 4); err != nil {
 			return nil, err
 		}
 	}
-	return &Subrecord{Tag: h.Tag(), Data: buff.Bytes()}, nil
+	return &esm.Subrecord{Tag: h.Tag(), Data: buff.Bytes()}, nil
 }

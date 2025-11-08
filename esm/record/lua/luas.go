@@ -1,9 +1,9 @@
-package esm
+package lua
 
 import (
 	"bytes"
 
-	"github.com/ernmw/omwpacker/esm/tags"
+	"github.com/ernmw/omwpacker/esm"
 )
 
 // https://gitlab.com/OpenMW/openmw/-/blob/master/components/lua/serialization.cpp
@@ -28,22 +28,22 @@ type LUASdata struct {
 	Path string
 }
 
-func (h *LUASdata) Tag() tags.SubrecordTag {
-	return tags.LUAS
+func (h *LUASdata) Tag() esm.SubrecordTag {
+	return LUAS
 }
 
-func (h *LUASdata) Unmarshal(sub *Subrecord) error {
+func (h *LUASdata) Unmarshal(sub *esm.Subrecord) error {
 	if h == nil || sub == nil {
-		return ErrArgumentNil
+		return esm.ErrArgumentNil
 	}
 	h.Path = string(sub.Data)
 	return nil
 }
 
-func (h *LUASdata) Marshal() (*Subrecord, error) {
+func (h *LUASdata) Marshal() (*esm.Subrecord, error) {
 	buff := new(bytes.Buffer)
 	if _, err := buff.WriteString(h.Path); err != nil {
 		return nil, err
 	}
-	return &Subrecord{Tag: h.Tag(), Data: buff.Bytes()}, nil
+	return &esm.Subrecord{Tag: h.Tag(), Data: buff.Bytes()}, nil
 }

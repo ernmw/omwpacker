@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/ernmw/omwpacker/esm"
-	"github.com/ernmw/omwpacker/esm/tags"
+	"github.com/ernmw/omwpacker/esm/record/lua"
 )
 
 var flagsByName = map[string]uint32{
@@ -17,24 +17,24 @@ var flagsByName = map[string]uint32{
 	"MENU":   1 << 4,
 }
 
-var tagsByName = map[string]tags.RecordTag{
-	"ACTIVATOR":  tags.ACTI,
-	"ARMOR":      tags.ARMO,
-	"BOOK":       tags.BOOK,
-	"CLOTHING":   tags.CLOT,
-	"CONTAINER":  tags.CONT,
-	"CREATURE":   tags.CREA,
-	"DOOR":       tags.DOOR,
-	"INGREDIENT": tags.INGR,
-	"LIGHT":      tags.LIGH,
-	"MISC_ITEM":  tags.MISC,
-	"NPC":        tags.NPC_,
-	"POTION":     tags.ALCH,
-	"WEAPON":     tags.WEAP,
-	"APPARATUS":  tags.APPA,
-	"LOCKPICK":   tags.LOCK,
-	"PROBE":      tags.PROB,
-	"REPAIR":     tags.REPA,
+var tagsByName = map[string]esm.RecordTag{
+	"ACTIVATOR":  "ACTI",
+	"ARMOR":      "ARMO",
+	"BOOK":       "BOOK",
+	"CLOTHING":   "CLOT",
+	"CONTAINER":  "CONT",
+	"CREATURE":   "CREA",
+	"DOOR":       "DOOR",
+	"INGREDIENT": "INGR",
+	"LIGHT":      "LIGH",
+	"MISC_ITEM":  "MISC",
+	"NPC":        "NPC_",
+	"POTION":     "ALCH",
+	"WEAPON":     "WEAP",
+	"APPARATUS":  "APPA",
+	"LOCKPICK":   "LOCK",
+	"PROBE":      "PROB",
+	"REPAIR":     "REPA",
 }
 
 func Package(content string) ([]*esm.Subrecord, error) {
@@ -56,7 +56,7 @@ func Package(content string) ([]*esm.Subrecord, error) {
 		if attachList == "" || path == "" {
 			return nil, fmt.Errorf("invalid line %d: %q (empty attach or path)", i+1, line)
 		}
-		luaf := &esm.LUAFdata{Targets: []string{}}
+		luaf := &lua.LUAFdata{Targets: []string{}}
 		for _, attach := range strings.Split(attachList, ",") {
 			key := strings.ToUpper(strings.TrimSpace(attach))
 			if flag, ok := flagsByName[key]; ok {
@@ -71,7 +71,7 @@ func Package(content string) ([]*esm.Subrecord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("fail to marshal LUAF: %w", err)
 		}
-		luasRec, err := (&esm.LUASdata{Path: path}).Marshal()
+		luasRec, err := (&lua.LUASdata{Path: path}).Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("fail to marshal LUAS for %q: %w", path, err)
 		}
