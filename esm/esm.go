@@ -13,6 +13,22 @@ import (
 	"strings"
 )
 
+var ErrArgumentNil error
+var ErrTagMismatch error
+
+func newErrTagMismatch(expected SubrecordTag, got SubrecordTag) error {
+	if expected != got {
+		return fmt.Errorf("expected %q, got %q: %w", expected, got, ErrTagMismatch)
+	}
+	return nil
+}
+
+type ParsedSubrecord interface {
+	Unmarshal(sub *Subrecord) error
+	Marshal() (*Subrecord, error)
+	Tag() SubrecordTag
+}
+
 type Subrecord struct {
 	Tag  SubrecordTag
 	Data []byte
@@ -29,6 +45,19 @@ func (s *Subrecord) Write(w io.Writer) error {
 	}
 	if _, err := w.Write(s.Data); err != nil {
 		return fmt.Errorf("write subrecord data: %v", err)
+	}
+	return nil
+}
+
+func (s *Subrecord) Unmarshal(p ParsedSubrecord) error {
+	if s == nil {
+		return ErrArgumentNil
+	}
+	if s.Tag != p.Tag() {
+		return newErrTagMismatch(p.Tag(), s.Tag)
+	}
+	if err := p.Unmarshal(s); err != nil {
+		return fmt.Errorf("unmarshal %q: %w", s.Tag, err)
 	}
 	return nil
 }
@@ -207,11 +236,10 @@ func writePaddedString(out *bytes.Buffer, s []byte, size int) error {
 }
 
 func readPaddedString(raw []byte) string {
-	nullIndex := bytes.IndexByte(raw, 0)
-	if nullIndex < 0 {
-		return ""
+	if i := bytes.IndexByte(raw, 0); i >= 0 {
+		return string(raw[:i])
 	}
-	return string(raw[:nullIndex])
+	return string(raw)
 }
 
 func bytesToFloat32(bytes []byte) float32 {
