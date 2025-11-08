@@ -26,17 +26,20 @@ func newErrTagMismatch(expected tags.SubrecordTag, got tags.SubrecordTag) error 
 	return nil
 }
 
+// ParsedSubrecord is an unmarshalled Subrecord.
 type ParsedSubrecord interface {
 	Unmarshal(sub *Subrecord) error
 	Marshal() (*Subrecord, error)
 	Tag() tags.SubrecordTag
 }
 
+// Subrecord is a marshalled component of a Record.
 type Subrecord struct {
 	Tag  tags.SubrecordTag
 	Data []byte
 }
 
+// Write the data in the subrecord to the writer w.
 func (s *Subrecord) Write(w io.Writer) error {
 	if _, err := w.Write([]byte(s.Tag)[0:4]); err != nil {
 		return fmt.Errorf("write subrecord tag %q: %v", s.Tag, err)
@@ -52,6 +55,7 @@ func (s *Subrecord) Write(w io.Writer) error {
 	return nil
 }
 
+// Unmarshal the subrecord, saving the data in p.
 func (s *Subrecord) Unmarshal(p ParsedSubrecord) error {
 	if s == nil {
 		return ErrArgumentNil
@@ -65,6 +69,7 @@ func (s *Subrecord) Unmarshal(p ParsedSubrecord) error {
 	return nil
 }
 
+// Record is an unmarshalled component of an ESM file.
 type Record struct {
 	// tag, size, padding, flags
 	Tag        tags.RecordTag
@@ -78,6 +83,7 @@ type Record struct {
 
 var padding = []byte{0, 0, 0, 0}
 
+// Write the record to the writer w.
 func (r *Record) Write(w io.Writer) error {
 	// tag
 	if _, err := w.Write([]byte(r.Tag)[0:4]); err != nil {
@@ -267,6 +273,8 @@ func WriteRecords(w io.Writer, recs iter.Seq[*Record]) error {
 	return nil
 }
 
+// NewTES3Record makes a new TES3 record, which must be the first
+// record in an ESM.
 func NewTES3Record(name string, description string) (*Record, error) {
 	// make new empty records
 	hedr := &HEDRdata{

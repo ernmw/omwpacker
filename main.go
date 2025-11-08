@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -141,6 +142,27 @@ func read(inPath string) error {
 	return nil
 }
 
+func backup(path string) (string, error) {
+	if fileExists(path) {
+		source, err := os.Open(path)
+		if err != nil {
+			return "", fmt.Errorf("failed to open file %q: %w", path, err)
+		}
+		defer source.Close()
+		tmp, err := os.CreateTemp("", filepath.Base(path))
+		if err != nil {
+			return "", fmt.Errorf("failed to create temporary file %q: %w", path, err)
+		}
+		defer tmp.Close()
+
+		if _, err := io.Copy(tmp, source); err != nil {
+			return "", fmt.Errorf("failed to backup file %q: %w", path, err)
+		}
+		return tmp.Name(), nil
+	}
+	return "", nil
+}
+
 func main() {
 	var usage = fmt.Sprintf("Usage: %s [pack|extract|read] <input> [output]\n", filepath.Base(os.Args[0]))
 	if len(os.Args) < 3 {
@@ -158,7 +180,7 @@ func main() {
 	ext := strings.ToLower(filepath.Ext(inPath))
 
 	if !fileExists(inPath) {
-		fmt.Printf("File %q not found\n", inPath)
+		fmt.Printf("💀 Failed: File %q not found\n", inPath)
 		os.Exit(1)
 	}
 
@@ -168,16 +190,29 @@ func main() {
 		if outPath == "" {
 			outPath = strings.TrimSuffix(inPath, ext) + ".omwaddon"
 		}
-		fmt.Printf("Packing %s → %s\n", inPath, outPath)
+
+		modify := fileExists(outPath)
+		if backupFile, err := backup(outPath); err != nil {
+			fmt.Printf("💀 Failed: Couldn't back up %q: %v\n", outPath, err)
+			os.Exit(1)
+		} else if len(backupFile) > 0 {
+			fmt.Printf("Backed up %q → %q\n", outPath, backupFile)
+		}
+
+		fmt.Printf("Packing %q → %q\n", inPath, outPath)
 		err := pack(inPath, outPath)
 		if err != nil {
 			fmt.Printf("💀 Failed: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("🩵 Created %q", outPath)
+		if modify {
+			fmt.Printf("🤍 Modified %q\n", outPath)
+		} else {
+			fmt.Printf("🩵 Created %q\n", outPath)
+		}
 	case "extract":
-		fmt.Printf("💀 Failed: %v\n", "not implemented yet")
+		fmt.Printf("💀 Failed: %v\n", "not implemented yet\n")
 		os.Exit(1)
 	case "read":
 		err := read(inPath)
@@ -185,7 +220,7 @@ func main() {
 			fmt.Printf("💀 Failed: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("🩷 Done reading %q", outPath)
+		fmt.Printf("🩷 Done reading %q\n", inPath)
 	default:
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(1)
