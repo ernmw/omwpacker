@@ -18,6 +18,66 @@ func fileExists(path string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
+func pack(inPath, outPath string) error {
+	var outRecords []*esm.Record
+
+	if fileExists(outPath) {
+		// file exists, so load it
+		var err error
+		outRecords, err = esm.ParsePluginFile(outPath)
+		if err != nil {
+			return fmt.Errorf("Failed to parse %q: %v", outPath, err)
+		}
+		// delete existing luaf/luas subrecords
+		for _, rec := range outRecords {
+			if rec.Tag == tags.LUAL {
+				rec.Subrecords = slices.DeleteFunc(rec.Subrecords, func(e *esm.Subrecord) bool {
+					return e.Tag == tags.LUAF || e.Tag == tags.LUAS
+				})
+			}
+		}
+	} else {
+		// make new empty records
+		firstRec, err := esm.NewTES3Record("", "Made with https://github.com/ernmw/omwpacker/")
+		if err != nil {
+			return fmt.Errorf("Failed to make empty recs: %v", err)
+		}
+		outRecords = []*esm.Record{firstRec}
+	}
+
+	inContents, err := os.ReadFile(inPath)
+	if err != nil {
+		return fmt.Errorf("Failed to read input file: %v", err)
+	}
+	subRecs, err := omwscripts.Package(string(inContents))
+	if err != nil {
+		return fmt.Errorf("Failed to read file %q: %v", inPath, err)
+	}
+
+	found := false
+	for _, rec := range outRecords {
+		if rec.Tag == tags.LUAL {
+			found = true
+			rec.Subrecords = append(rec.Subrecords, subRecs...)
+		}
+	}
+	if !found {
+		// make new lual
+		outRecords = append(outRecords, &esm.Record{
+			Tag:        tags.LUAL,
+			Subrecords: subRecs,
+		})
+	}
+	writeOut, err := os.Create(outPath)
+	if err != nil {
+		return fmt.Errorf("Failed to read file %q: %v", inPath, err)
+	}
+	if err := esm.WriteRecords(writeOut, slices.Values(outRecords)); err != nil {
+		return fmt.Errorf("Failed to write file %q: %v", outPath, err)
+	}
+	return nil
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <input> [output]\n", filepath.Base(os.Args[0]))
@@ -44,70 +104,13 @@ func main() {
 			outPath = strings.TrimSuffix(inPath, ext) + ".omwaddon"
 		}
 		fmt.Printf("Packing %s → %s\n", inPath, outPath)
-
-		var outRecords []*esm.Record
-
-		if fileExists(outPath) {
-			// file exists, so load it
-			var err error
-			outRecords, err = esm.ParsePluginFile(outPath)
-			if err != nil {
-				fmt.Printf("Failed to parse %q: %v", outPath, err)
-				os.Exit(1)
-			}
-			// delete existing luaf/luas subrecords
-			for _, rec := range outRecords {
-				if rec.Tag == tags.LUAL {
-					rec.Subrecords = slices.DeleteFunc(rec.Subrecords, func(e *esm.Subrecord) bool {
-						return e.Tag == tags.LUAF || e.Tag == tags.LUAS
-					})
-				}
-			}
-		} else {
-			// make new empty records
-			firstRec, err := esm.NewTES3Record("", "Made with https://github.com/ernmw/omwpacker/")
-			if err != nil {
-				fmt.Printf("Failed to make empty recs: %v", err)
-				os.Exit(1)
-			}
-			outRecords = []*esm.Record{firstRec}
-		}
-
-		inContents, err := os.ReadFile(inPath)
+		err := pack(inPath, outPath)
 		if err != nil {
-			fmt.Printf("Failed to read input file: %v", err)
-			os.Exit(1)
-		}
-		subRecs, err := omwscripts.Package(string(inContents))
-		if err != nil {
-			fmt.Printf("Failed to read file %q: %v", inPath, err)
+			fmt.Println("💀 Failed: ", outPath)
 			os.Exit(1)
 		}
 
-		found := false
-		for _, rec := range outRecords {
-			if rec.Tag == tags.LUAL {
-				found = true
-				rec.Subrecords = append(rec.Subrecords, subRecs...)
-			}
-		}
-		if !found {
-			// make new lual
-			outRecords = append(outRecords, &esm.Record{
-				Tag:        tags.LUAL,
-				Subrecords: subRecs,
-			})
-		}
-		writeOut, err := os.Create(outPath)
-		if err != nil {
-			fmt.Printf("Failed to read file %q: %v", inPath, err)
-			os.Exit(1)
-		}
-		if err := esm.WriteRecords(writeOut, slices.Values(outRecords)); err != nil {
-			fmt.Printf("Failed to write file %q: %v", outPath, err)
-			os.Exit(1)
-		}
-		fmt.Println("✓ Created", outPath)
+		fmt.Printf("🩵 Created %q", outPath)
 
 	case ".omwaddon", ".esp":
 		fmt.Println("not implemented yet")
