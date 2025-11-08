@@ -1,6 +1,15 @@
 package cell
 
-//go:generate go run ../cmd/generator/main.go .
+import (
+	"github.com/ernmw/omwpacker/esm"
+	"github.com/ernmw/omwpacker/esm/record"
+)
+
+type anamTagger struct{}
+
+func (t *anamTagger) Tag() esm.SubrecordTag { return "ANAM" }
+
+type ANAMdata = record.ZstringSubrecord[*anamTagger]
 
 // References to objects in cells are listed as part of the cell data, each beginning with FRMR and NAME fields, followed by a list of fields specific to the object type.
 type FormReference struct {

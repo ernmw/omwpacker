@@ -9,18 +9,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAbstract(t *testing.T) {
-	concType := record.Tag{Value: "CONC"}
-	c := record.AbstractZSTRING[concType]
+type anamTagger struct{}
 
-	c := &concreteZSTRING{AbstractZSTRING: "a value"}
-	require.Equal(t, esm.SubrecordTag("CONC"), c.Tag())
-	sub, err := c.Marshal()
+func (t *anamTagger) Tag() esm.SubrecordTag { return "ANAM" }
+
+type ANAMdata = record.ZstringSubrecord[*anamTagger]
+
+func TestAbstract(t *testing.T) {
+	a := ANAMdata{Value: "hello there"}
+	sub, err := a.Marshal()
 	require.NoError(t, err)
 	require.NotNil(t, sub)
-	require.Equal(t, esm.SubrecordTag("CONC"), sub.Tag)
-	require.True(t, bytes.Contains(sub.Data, []byte("a value")))
-	unmarsh := concreteZSTRING{}
+	require.True(t, bytes.Contains(sub.Data, []byte("hello there")))
+	require.Equal(t, esm.SubrecordTag("ANAM"), sub.Tag)
+
+	unmarsh := ANAMdata{}
 	require.NoError(t, sub.Unmarshal(&unmarsh))
-	require.Equal(t, c, unmarsh)
+	require.Equal(t, a, unmarsh)
 }
