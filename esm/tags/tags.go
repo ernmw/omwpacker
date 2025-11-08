@@ -5,8 +5,10 @@ package tags
 type RecordTag string
 
 const (
-	// Lua record.
+	// LUAL - LuaScriptsCfg - list of all scripts (in content files)
 	LUAL RecordTag = "LUAL"
+	// LUAM - MWLua::LuaManager (in saves)
+	LUAM RecordTag = "LUAM"
 
 	// Activator.
 	ACTI RecordTag = "ACTI"
@@ -165,10 +167,22 @@ const (
 	// Size of the previous master file in bytes (used for version tracking of plugin)
 	DATA SubrecordTag = "DATA"
 
+	// LUAF - LuaScriptCfg::mFlags and ESM::RecNameInts list
 	LUAF SubrecordTag = "LUAF"
+	// LUAW - Simulation time and last generated RefNum
 	LUAW SubrecordTag = "LUAW"
+	// LUAE - Start of MWLua::LocalEvent or MWLua::GlobalEvent (eventName)
+	LUAE SubrecordTag = "LUAE"
+	// LUAS - VFS path to a Lua script
 	LUAS SubrecordTag = "LUAS"
+	// LUAD - Serialized Lua variable
 	LUAD SubrecordTag = "LUAD"
+	// LUAT - MWLua::ScriptsContainer::Timer
 	LUAT SubrecordTag = "LUAT"
+	// LUAC - Name of a timer callback (string)
 	LUAC SubrecordTag = "LUAC"
+	// LUAR - Attach script to a specific record (LuaScriptCfg::PerRecordCfg)
+	LUAR SubrecordTag = "LUAR"
+	// LUAI - Attach script to a specific instance (LuaScriptCfg::PerRefCfg)
+	LUAI SubrecordTag = "LUAI"
 )

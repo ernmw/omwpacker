@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -84,50 +83,36 @@ func pack(inPath, outPath string) error {
 
 // printHex prints binary data in a readable, aligned format.
 // For terminals: each ASCII char appears *above* its corresponding byte’s hex.
-func printHex(dump []byte) error {
-	fd := int(os.Stdout.Fd())
-	if term.IsTerminal(fd) {
-		width, _, err := term.GetSize(fd)
-		if err != nil {
-			return fmt.Errorf("get terminal size: %w", err)
-		}
+func printHex(width int, dump []byte) error {
 
-		// Each byte = 3 columns ("xx ").
-		// Determine how many bytes per line.
-		bytesPerLine := width / 3
-		if bytesPerLine > 32 {
-			bytesPerLine = 32
-		} else if bytesPerLine < 4 {
-			bytesPerLine = 4
-		}
+	// Each byte = 3 columns ("xx ").
+	// Determine how many bytes per line.
+	bytesPerLine := width / 3
+	if bytesPerLine > 32 {
+		bytesPerLine = 32
+	} else if bytesPerLine < 4 {
+		bytesPerLine = 4
+	}
 
-		for i := 0; i < len(dump); i += bytesPerLine {
-			end := i + bytesPerLine
-			if end > len(dump) {
-				end = len(dump)
+	for i := 0; i < len(dump); i += bytesPerLine {
+		end := min(i+bytesPerLine, len(dump))
+		line := dump[i:end]
+
+		// Build top row: printable chars, padded to same column positions as hex
+		for _, b := range line {
+			if unicode.IsPrint(rune(b)) {
+				fmt.Printf(" %c ", b)
+			} else {
+				fmt.Printf(" . ")
 			}
-			line := dump[i:end]
-
-			// Build top row: printable chars, padded to same column positions as hex
-			for _, b := range line {
-				if unicode.IsPrint(rune(b)) {
-					fmt.Printf(" %c ", b)
-				} else {
-					fmt.Printf(" . ")
-				}
-			}
-			fmt.Println()
-
-			// Build bottom row: hex values aligned under the chars
-			for _, b := range line {
-				fmt.Printf("%02x ", b)
-			}
-			fmt.Println()
 		}
+		fmt.Println()
 
-	} else {
-		// Non-terminal (e.g. redirected): simple hex dump
-		fmt.Printf("%s\n", hex.EncodeToString(dump))
+		// Build bottom row: hex values aligned under the chars
+		for _, b := range line {
+			fmt.Printf("%02x ", b)
+		}
+		fmt.Println()
 	}
 	return nil
 }
@@ -137,12 +122,20 @@ func read(inPath string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to parse %q: %v", inPath, err)
 	}
+	width := 120
+
+	if fd := int(os.Stdout.Fd()); term.IsTerminal(fd) {
+		width, _, err = term.GetSize(fd)
+		if err != nil {
+			return fmt.Errorf("get terminal size: %w", err)
+		}
+	}
 	// delete existing luaf/luas subrecords
 	for _, rec := range inRecords {
 		fmt.Printf("%s: \n", rec.Tag)
 		for _, subRec := range rec.Subrecords {
 			fmt.Printf("  %s: \n", subRec.Tag)
-			printHex(subRec.Data)
+			printHex(width, subRec.Data)
 		}
 	}
 	return nil
