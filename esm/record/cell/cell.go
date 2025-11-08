@@ -11,14 +11,17 @@ import (
 
 // CellRecord represents a full CellRecord record composed of subrecords.
 type CellRecord struct {
-	NAME *NAMEdata
-	DATA *DATAdata
-	RGNN *RGNNdata
-	NAM5 *NAM5data
-	WHGT *WHGTdata
-	AMBI *AMBIdata
-	FRMR []*FRMRdata
-	MVRF []*MVRFdata
+	NAME               *NAMEdata
+	DATA               *DATAdata
+	RGNN               *RGNNdata
+	NAM5               *NAM5data
+	WHGT               *WHGTdata
+	AMBI               *AMBIdata
+	MovedReferences    []*MoveReference
+	PersistentChildren []*FormReference
+	// Count of temporaray children
+	NAM0              *NAM0data
+	TemporaryChildren []*FormReference
 }
 
 // ========== Subrecord: NAME ==========
@@ -242,8 +245,9 @@ func ParseCELL(subs []*esm.Subrecord) (*CellRecord, error) {
 	}
 
 	c := &CellRecord{
-		FRMR: []*FRMRdata{},
-		MVRF: []*MVRFdata{},
+		MovedReferences:    []*MoveReference{},
+		PersistentChildren: []*FormReference{},
+		TemporaryChildren:  []*FormReference{},
 	}
 	for _, sub := range subs {
 		switch sub.Tag {
@@ -283,18 +287,18 @@ func ParseCELL(subs []*esm.Subrecord) (*CellRecord, error) {
 				return nil, err
 			}
 			c.AMBI = s
-		case FRMR:
-			s := &FRMRdata{}
-			if err := s.Unmarshal(sub); err != nil {
-				return nil, err
-			}
-			c.FRMR = append(c.FRMR, s)
 		case MVRF:
 			s := &MVRFdata{}
 			if err := s.Unmarshal(sub); err != nil {
 				return nil, err
 			}
 			c.MVRF = append(c.MVRF, s)
+		case FRMR:
+			s := &FRMRdata{}
+			if err := s.Unmarshal(sub); err != nil {
+				return nil, err
+			}
+			c.FRMR = append(c.FRMR, s)
 		default:
 			return nil, fmt.Errorf("unknown CELL subrecord %q", sub.Tag)
 		}
