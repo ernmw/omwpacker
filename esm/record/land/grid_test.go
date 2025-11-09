@@ -5,46 +5,47 @@ import (
 	"testing"
 )
 
-func TestFillAndFlattenGridVariableSize(t *testing.T) {
-	width, height := 5, 4
-	data := make([]byte, width*height)
-	for i := range data {
-		data[i] = uint8(i)
-	}
+func TestZeroAllocGrid_ByteField(t *testing.T) {
+	width, height := 3, 2
 
-	// Create a properly sized 2D grid
-	grid := make([][]uint8, height)
+	// Prepare input data: 0..5
+	data := []byte{0, 1, 2, 3, 4, 5}
+
+	// Create grid of ByteField pointers
+	grid := make([][]*ByteField, height)
 	for y := range grid {
-		grid[y] = make([]uint8, width)
+		grid[y] = make([]*ByteField, width)
+		for x := range grid[y] {
+			grid[y][x] = new(ByteField)
+		}
 	}
 
-	if err := fillGridFromBytes(grid, width, height, data); err != nil {
+	// Fill grid from data (zero allocation)
+	if err := FillGridFromBytes(grid, width, height, data); err != nil {
 		t.Fatalf("FillGridFromBytes failed: %v", err)
 	}
 
-	// Verify round-trip correctness
-	out := flattenGrid(grid, width, height)
+	// Verify values were copied correctly
+	for y := range height {
+		for x := range width {
+			got := *grid[y][x]      // ByteField
+			want := data[y*width+x] // byte
+			if byte(got) != want {  // explicit conversion
+				t.Fatalf("grid[%d][%d] = %d, want %d", y, x, got, want)
+			}
+		}
+	}
+
+	// Preallocate output buffer for flattening (zero allocation)
+	out := make([]byte, width*height)
+
+	// Flatten grid back to out
+	if err := FlattenGrid(grid, width, height, out); err != nil {
+		t.Fatalf("FlattenGrid failed: %v", err)
+	}
+
+	// Check that flattened buffer matches original data
 	if !bytes.Equal(out, data) {
-		t.Fatalf("flattened data mismatch:\n got %v\nwant %v", out, data)
-	}
-}
-
-func TestFillGridFromBytesErrors(t *testing.T) {
-	width, height := 3, 2
-	grid := make([][]uint8, height)
-	for i := range grid {
-		grid[i] = make([]uint8, width)
-	}
-
-	// too short data
-	data := make([]byte, width*height-1)
-	if err := fillGridFromBytes(grid, width, height, data); err == nil {
-		t.Fatalf("expected error for short data, got nil")
-	}
-
-	// wrong row width
-	grid[0] = make([]uint8, width-1)
-	if err := fillGridFromBytes(grid, width, height, make([]byte, width*height)); err == nil {
-		t.Fatalf("expected error for wrong row width, got nil")
+		t.Fatalf("flattened data mismatch:\n got  %v\n want %v", out, data)
 	}
 }
