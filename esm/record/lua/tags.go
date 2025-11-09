@@ -1,5 +1,7 @@
 // Package lua handles LUAL and LUAM records, which are
 // specific to openmw.
+//
+//go:generate go run ../generator/gen.go subrecords.json
 package lua
 
 import "github.com/ernmw/omwpacker/esm"
@@ -18,8 +20,6 @@ const (
 	LUAW esm.SubrecordTag = "LUAW"
 	// LUAE - Start of MWLua::LocalEvent or MWLua::GlobalEvent (eventName)
 	LUAE esm.SubrecordTag = "LUAE"
-	// LUAS - VFS path to a Lua script
-	LUAS esm.SubrecordTag = "LUAS"
 	// LUAD - Serialized Lua variable
 	LUAD esm.SubrecordTag = "LUAD"
 	// LUAT - MWLua::ScriptsContainer::Timer

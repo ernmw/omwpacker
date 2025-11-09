@@ -1,0 +1,128 @@
+[
+  {
+    "Tag": "DODT",
+    "Template": "posrot3",
+    "Comment": "Cell Travel Destination (Rotations are in radians)."
+  },
+  {
+    "Tag": "DATAFormReference",
+    "Template": "posrot3",
+    "Comment": "Reference position (Rotations are in radians)."
+  },
+  {
+    "Tag": "CNDT",
+    "Template": "coord2",
+    "Comment": "Coordinates of the cell the reference was moved to (exterior cells only)."
+  },
+  {
+    "Tag": "INTV",
+    "Template": "uint32",
+    "Comment": "Remaining usage. uint32 - health remaining (weapons and armor). uint32 - uses remaining (locks, probes, repair items). float32 - time remaining (lights)."
+  },
+
+  {
+    "Tag": "NAM5",
+    "Template": "rgb",
+    "Comment": "Map color (exterior and like-exterior only)."
+  },
+  {
+    "Tag": "NAM0",
+    "Template": "uint32",
+    "Comment": "Count of Temporary Children."
+  },
+  {
+    "Tag": "FRMR",
+    "Template": "uint32",
+    "Comment": "Reference ID for a Form Reference."
+  },
+  {
+    "Tag": "MVRF",
+    "Template": "uint32",
+    "Comment": "Reference ID (always the same as the attached FRMR value)."
+  },
+  {
+    "Tag": "NAME",
+    "Template": "zstring",
+    "Comment": "Cell Name. Unlike other NAME fields, this is the localized, human-readable name of the cell, not a language-agnostic ID string. Exterior regions are mostly empty strings; for these, the region name is used in the Construction Set."
+  },
+  {
+    "Tag": "RGNN",
+    "Template": "zstring",
+    "Comment": "Region name (exterior and like-exterior only)."
+  },
+  {
+    "Tag": "WHGT",
+    "Template": "float32",
+    "Comment": "Water height (interior only)."
+  },
+  {
+    "Tag": "ANAM",
+    "Template": "zstring",
+    "Comment": "NPC ID, if applicable (NPC-only)."
+  },
+  {
+    "Tag": "BNAM",
+    "Template": "zstring",
+    "Comment": "Global variable name."
+  },
+  {
+    "Tag": "UNAM",
+    "Template": "uint8",
+    "Comment": "Reference blocked flag (always 0, present if Blocked is set in the header)."
+  },
+  {
+    "Tag": "XSCL",
+    "Template": "float32",
+    "Comment": "Reference's scale, if applicable and not 1.0."
+  },
+  {
+    "Tag": "CNAM",
+    "Template": "zstring",
+    "Comment": "Name of the cell the reference was moved to (interior cells only) or Faction ID (not light, NPC, or static)."
+  },
+  {
+    "Tag": "INDX",
+    "Template": "uint32",
+    "Comment": "Faction rank (uint32)."
+  },
+  {
+    "Tag": "XSOL",
+    "Template": "zstring",
+    "Comment": "ID of soul in gem (soul gems only)."
+  },
+  {
+    "Tag": "XCHG",
+    "Template": "float32",
+    "Comment": "Enchantment charge (charged items with non-zero charges), a float32."
+  },
+  {
+    "Tag": "NAM9",
+    "Template": "uint32",
+    "Comment": "Value (uint32)."
+  },
+  {
+    "Tag": "DNAM",
+    "Template": "zstring",
+    "Comment": "Cell name for previous DODT, if interior."
+  },
+  {
+    "Tag": "FLTV",
+    "Template": "uint32",
+    "Comment": "Lock difficulty (uint32)."
+  },
+  {
+    "Tag": "KNAM",
+    "Template": "zstring",
+    "Comment": "Key name."
+  },
+  {
+    "Tag": "TNAM",
+    "Template": "zstring",
+    "Comment": "Trap name."
+  },
+  {
+    "Tag": "ZNAM",
+    "Template": "uint8",
+    "Comment": "Reference is disabled flag (always 0, present if the relevant flag is set in the header)."
+  }
+]

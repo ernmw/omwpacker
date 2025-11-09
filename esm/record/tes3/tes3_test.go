@@ -20,7 +20,7 @@ func TestHeader(t *testing.T) {
 	require.True(t, bytes.Contains(raw.Data, []byte("description")))
 
 	h2 := &HEDRdata{}
-	require.NoError(t, raw.Unmarshal(h2))
+	require.NoError(t, raw.UnmarshalTo(h2))
 	require.Equal(t, "description", h2.Description)
 	require.Equal(t, "name", h2.Name)
 }

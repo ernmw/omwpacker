@@ -1,0 +1,56 @@
+// {{.Comment}}
+const {{.Tag}} esm.SubrecordTag = "{{fourCC .Tag}}"
+
+// {{.Comment}}
+type {{.Tag}}Field struct{
+PosX float32
+PosY float32
+PosZ float32
+RotX float32
+RotY float32
+RotZ float32
+}
+
+func (t *{{.Tag}}Field) Tag() esm.SubrecordTag { return {{.Tag}} }
+
+func (s *{{.Tag}}Field) Unmarshal(sub *esm.Subrecord) error {
+	if s == nil || sub == nil {
+		return esm.ErrArgumentNil
+	}
+	s.PosX = util.BytesToFloat32(sub.Data[0:4])
+	s.PosY = util.BytesToFloat32(sub.Data[4:8])
+	s.PosZ = util.BytesToFloat32(sub.Data[8:12])
+	s.RotX = util.BytesToFloat32(sub.Data[12:16])
+	s.RotY = util.BytesToFloat32(sub.Data[16:20])
+	s.RotZ = util.BytesToFloat32(sub.Data[20:24])
+	return nil
+}
+
+func (s *{{.Tag}}Field) Marshal() (*esm.Subrecord, error) {
+    if s == nil {
+		return nil, nil
+	}
+
+	buff := new(bytes.Buffer)
+
+	if err := binary.Write(buff, binary.LittleEndian, s.PosX); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, s.PosY); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, s.PosZ); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, s.RotX); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, s.RotY); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, s.RotZ); err != nil {
+		return nil, err
+	}
+
+	return &esm.Subrecord{Tag: s.Tag(), Data: buff.Bytes()}, nil
+}

@@ -26,9 +26,9 @@ import (
  // LUAC - Name of a timer callback (string)
 */
 
-// LUAFdata is the thing the script is attached to.
+// LUAFField is the thing the script is attached to.
 // https://gitlab.com/OpenMW/openmw/-/blob/master/components/esm/luascripts.cpp#L62
-type LUAFdata struct {
+type LUAFField struct {
 	// Flags cover types of script attachment which don't logically correlate to a type of gameobject -> Player, Global, Custom, Menu, etc.
 	// Player is one of them, since they are an NPC.
 	//
@@ -46,11 +46,11 @@ type LUAFdata struct {
 	Targets []string
 }
 
-func (h *LUAFdata) Tag() esm.SubrecordTag {
+func (h *LUAFField) Tag() esm.SubrecordTag {
 	return LUAF
 }
 
-func (h *LUAFdata) Unmarshal(sub *esm.Subrecord) error {
+func (h *LUAFField) Unmarshal(sub *esm.Subrecord) error {
 	if h == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
@@ -65,7 +65,10 @@ func (h *LUAFdata) Unmarshal(sub *esm.Subrecord) error {
 	return nil
 }
 
-func (h *LUAFdata) Marshal() (*esm.Subrecord, error) {
+func (h *LUAFField) Marshal() (*esm.Subrecord, error) {
+	if h == nil {
+		return nil, nil
+	}
 	buff := new(bytes.Buffer)
 	if err := binary.Write(buff, binary.LittleEndian, h.Flags); err != nil {
 		return nil, err
