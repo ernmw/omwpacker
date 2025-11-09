@@ -37,7 +37,8 @@ func TestCellSubrecordMarshalUnmarshal(t *testing.T) {
 		}()},
 	}
 
-	cell, err := ParseCELL(cloneSubs(tests))
+	cellRec := &esm.Record{Tag: CELL, Subrecords: cloneSubs(tests)}
+	cell, err := ParseCELL(cellRec)
 	if err != nil {
 		t.Fatalf("ParseCELL failed: %v", err)
 	}

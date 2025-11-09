@@ -14,7 +14,7 @@ type nam0Tagger struct{}
 
 func (t *nam0Tagger) Tag() esm.SubrecordTag { return "NAM0" }
 
-type NAM0data = record.BytesSubrecord[*nam0Tagger]
+type NAM0data = record.Uint32Subrecord[*nam0Tagger]
 
 // CellRecord represents a full CellRecord record composed of subrecords.
 type CellRecord struct {
@@ -31,7 +31,79 @@ type CellRecord struct {
 	TemporaryChildren []*FormReference
 }
 
-// ========== Subrecord: NAME ==========
+func (c *CellRecord) OrderedRecords() ([]*esm.Subrecord, error) {
+	if c == nil {
+		return nil, nil
+	}
+	orderedSubrecords := []*esm.Subrecord{}
+	add := func(p esm.ParsedSubrecord) error {
+		if p != nil {
+			subRec := esm.Subrecord{}
+			if err := subRec.Unmarshal(p); err != nil {
+				return err
+			}
+			orderedSubrecords = append(orderedSubrecords, &subRec)
+		}
+		return nil
+	}
+
+	if err := add(c.NAME); err != nil {
+		return nil, err
+	}
+	if err := add(c.DATA); err != nil {
+		return nil, err
+	}
+	if err := add(c.RGNN); err != nil {
+		return nil, err
+	}
+	if err := add(c.NAM5); err != nil {
+		return nil, err
+	}
+	if err := add(c.WHGT); err != nil {
+		return nil, err
+	}
+	if err := add(c.AMBI); err != nil {
+		return nil, err
+	}
+
+	for _, mr := range c.MovedReferences {
+		if recs, err := mr.OrderedRecords(); err != nil {
+			return nil, err
+		} else {
+			orderedSubrecords = append(orderedSubrecords, recs...)
+		}
+	}
+	for _, fr := range c.PersistentChildren {
+		if recs, err := fr.OrderedRecords(); err != nil {
+			return nil, err
+		} else {
+			orderedSubrecords = append(orderedSubrecords, recs...)
+		}
+	}
+
+	// deal with temp children in cell
+	tempChildrenCount := uint32(len(c.TemporaryChildren))
+	if tempChildrenCount > 0 {
+		if c.NAM0 == nil {
+			c.NAM0 = &NAM0data{}
+		}
+		c.NAM0.Value = uint32(len(c.TemporaryChildren))
+		if err := add(c.NAM0); err != nil {
+			return nil, err
+		}
+		for _, fr := range c.TemporaryChildren {
+			if recs, err := fr.OrderedRecords(); err != nil {
+				return nil, err
+			} else {
+				orderedSubrecords = append(orderedSubrecords, recs...)
+			}
+		}
+	} else {
+		c.NAM0 = nil
+	}
+
+	return orderedSubrecords, nil
+}
 
 type NAMEdata struct {
 	Name string
@@ -218,20 +290,21 @@ func (s *MVRFdata) Marshal() (*esm.Subrecord, error) {
 	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
 }
 
-// ========== CELL Record Parser ==========
-
 // ParseCELL builds a CELL record from a list of subrecords.
-func ParseCELL(subs []*esm.Subrecord) (*CellRecord, error) {
-	if subs == nil {
+func ParseCELL(rec *esm.Record) (*CellRecord, error) {
+	if rec == nil {
 		return nil, esm.ErrArgumentNil
+	}
+	if rec.Tag != CELL {
+		return nil, esm.ErrTagMismatch
 	}
 	c := &CellRecord{
 		MovedReferences:    []*MoveReference{},
 		PersistentChildren: []*FormReference{},
 		TemporaryChildren:  []*FormReference{},
 	}
-	for i := 0; i < len(subs); i++ {
-		sub := subs[i]
+	for i := 0; i < len(rec.Subrecords); i++ {
+		sub := rec.Subrecords[i]
 		switch sub.Tag {
 		case NAME:
 			s := &NAMEdata{}
@@ -270,14 +343,14 @@ func ParseCELL(subs []*esm.Subrecord) (*CellRecord, error) {
 			}
 			c.AMBI = s
 		case MVRF:
-			newMoveRef, consumed, err := ParseMoveRef(subs[i:])
+			newMoveRef, consumed, err := ParseMoveRef(rec.Subrecords[i:])
 			if err != nil {
 				return nil, fmt.Errorf("parse form reference: %w", err)
 			}
 			c.MovedReferences = append(c.MovedReferences, newMoveRef)
 			i = i + consumed
 		case FRMR:
-			newFormRef, consumed, err := ParseFormRef(subs[i:])
+			newFormRef, consumed, err := ParseFormRef(rec.Subrecords[i:])
 			if err != nil {
 				return nil, fmt.Errorf("parse form reference: %w", err)
 			}

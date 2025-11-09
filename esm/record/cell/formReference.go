@@ -205,6 +205,79 @@ type FormReference struct {
 	DATA *FormReferenceDATAdata
 }
 
+func (f *FormReference) OrderedRecords() ([]*esm.Subrecord, error) {
+	if f == nil {
+		return nil, nil
+	}
+	orderedSubrecords := []*esm.Subrecord{}
+	add := func(p esm.ParsedSubrecord) error {
+		if p != nil {
+			subRec := esm.Subrecord{}
+			if err := subRec.Unmarshal(p); err != nil {
+				return err
+			}
+			orderedSubrecords = append(orderedSubrecords, &subRec)
+		}
+		return nil
+	}
+
+	if err := add(f.FRMR); err != nil {
+		return nil, err
+	}
+	if err := add(f.NAME); err != nil {
+		return nil, err
+	}
+	if err := add(f.UNAM); err != nil {
+		return nil, err
+	}
+	if err := add(f.XSCL); err != nil {
+		return nil, err
+	}
+	if err := add(f.ANAM); err != nil {
+		return nil, err
+	}
+	if err := add(f.BNAM); err != nil {
+		return nil, err
+	}
+	if err := add(f.INDX); err != nil {
+		return nil, err
+	}
+	if err := add(f.XSOL); err != nil {
+		return nil, err
+	}
+	if err := add(f.XCHG); err != nil {
+		return nil, err
+	}
+	if err := add(f.INTV); err != nil {
+		return nil, err
+	}
+	if err := add(f.NAM9); err != nil {
+		return nil, err
+	}
+	if err := add(f.DODT); err != nil {
+		return nil, err
+	}
+	if err := add(f.DNAM); err != nil {
+		return nil, err
+	}
+	if err := add(f.FLTV); err != nil {
+		return nil, err
+	}
+	if err := add(f.KNAM); err != nil {
+		return nil, err
+	}
+	if err := add(f.TNAM); err != nil {
+		return nil, err
+	}
+	if err := add(f.ZNAM); err != nil {
+		return nil, err
+	}
+	if err := add(f.DATA); err != nil {
+		return nil, err
+	}
+	return orderedSubrecords, nil
+}
+
 // returns formref + how many records it ate
 func ParseFormRef(subs []*esm.Subrecord) (*FormReference, int, error) {
 	if subs == nil {

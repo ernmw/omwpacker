@@ -57,6 +57,43 @@ type MoveReference struct {
 	Moved *FormReference
 }
 
+func (m *MoveReference) OrderedRecords() ([]*esm.Subrecord, error) {
+	if m == nil {
+		return nil, nil
+	}
+	orderedSubrecords := []*esm.Subrecord{}
+	add := func(p esm.ParsedSubrecord) error {
+		if p != nil {
+			subRec := esm.Subrecord{}
+			if err := subRec.Unmarshal(p); err != nil {
+				return err
+			}
+			orderedSubrecords = append(orderedSubrecords, &subRec)
+		}
+		return nil
+	}
+
+	if err := add(m.MVRF); err != nil {
+		return nil, err
+	}
+	if err := add(m.CNAM); err != nil {
+		return nil, err
+	}
+	if err := add(m.CNDT); err != nil {
+		return nil, err
+	}
+
+	if m.Moved != nil {
+		if recs, err := m.Moved.OrderedRecords(); err != nil {
+			return nil, err
+		} else {
+			orderedSubrecords = append(orderedSubrecords, recs...)
+		}
+	}
+
+	return orderedSubrecords, nil
+}
+
 // returns formref + how many records it ate
 func ParseMoveRef(subs []*esm.Subrecord) (*MoveReference, int, error) {
 	if subs == nil {
