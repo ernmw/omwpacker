@@ -17,11 +17,101 @@ func (t *anamTagger) Tag() esm.SubrecordTag { return "ANAM" }
 
 type ANAMdata = record.ZstringSubrecord[*anamTagger]
 
+type bnamTagger struct{}
+
+func (t *bnamTagger) Tag() esm.SubrecordTag { return "BNAM" }
+
+type BNAMdata = record.ZstringSubrecord[*bnamTagger]
+
 type unamTagger struct{}
 
 func (t *unamTagger) Tag() esm.SubrecordTag { return "UNAM" }
 
-type UNAMdata = record.Uint8Subrecord[*anamTagger]
+type UNAMdata = record.Uint8Subrecord[*unamTagger]
+
+type xsclTagger struct{}
+
+func (t *xsclTagger) Tag() esm.SubrecordTag { return "XSCL" }
+
+type XSCLdata = record.Float32Subrecord[*xsclTagger]
+
+type cnamTagger struct{}
+
+func (t *cnamTagger) Tag() esm.SubrecordTag { return "CNAM" }
+
+type CNAMdata = record.ZstringSubrecord[*cnamTagger]
+
+type indxTagger struct{}
+
+func (t *indxTagger) Tag() esm.SubrecordTag { return "INDX" }
+
+type INDXdata = record.Uint32Subrecord[*indxTagger]
+
+type xsolTagger struct{}
+
+func (t *xsolTagger) Tag() esm.SubrecordTag { return "XSOL" }
+
+type XSOLdata = record.ZstringSubrecord[*xsolTagger]
+
+type xchgTagger struct{}
+
+func (t *xchgTagger) Tag() esm.SubrecordTag { return "XCHG" }
+
+type XCHGdata = record.Float32Subrecord[*xchgTagger]
+
+type nam9Tagger struct{}
+
+func (t *nam9Tagger) Tag() esm.SubrecordTag { return "NAM9" }
+
+type NAM9data = record.Uint32Subrecord[*nam9Tagger]
+
+type dnamTagger struct{}
+
+func (t *dnamTagger) Tag() esm.SubrecordTag { return "DNAM" }
+
+type DNAMdata = record.ZstringSubrecord[*dnamTagger]
+
+type fltvTagger struct{}
+
+func (t *fltvTagger) Tag() esm.SubrecordTag { return "FLTV" }
+
+type FLTVdata = record.Uint32Subrecord[*fltvTagger]
+
+type knamTagger struct{}
+
+func (t *knamTagger) Tag() esm.SubrecordTag { return "KNAM" }
+
+type KNAMdata = record.ZstringSubrecord[*knamTagger]
+
+type tnamTagger struct{}
+
+func (t *tnamTagger) Tag() esm.SubrecordTag { return "TNAM" }
+
+type TNAMdata = record.ZstringSubrecord[*tnamTagger]
+
+type znamTagger struct{}
+
+func (t *znamTagger) Tag() esm.SubrecordTag { return "ZNAM" }
+
+type ZNAMdata = record.Uint8Subrecord[*znamTagger]
+
+type intvTagger struct{}
+
+func (t *intvTagger) Tag() esm.SubrecordTag { return "INTV" }
+
+type INTVdata = record.BytesSubrecord[*intvTagger]
+
+type dodtTagger struct{}
+
+func (t *dodtTagger) Tag() esm.SubrecordTag { return "DODT" }
+
+type DODTdata = record.BytesSubrecord[*dodtTagger]
+
+type formReferenceDATAtagger struct{}
+
+func (t *formReferenceDATAtagger) Tag() esm.SubrecordTag { return "DATA" }
+
+type FormReferenceDATAdata = record.BytesSubrecord[*formReferenceDATAtagger]
 
 // References to objects in cells are listed as part of the cell data, each beginning with FRMR and NAME fields, followed by a list of fields specific to the object type.
 type FormReference struct {
@@ -96,10 +186,6 @@ type FormReference struct {
 	// zstring
 	// Optional.
 	KNAM *KNAMdata
-	// Key name
-	// zstring
-	// Optional.
-	KNAM *KNAMdata
 	// Trap name
 	// zstring
 	// Optional.
@@ -117,4 +203,57 @@ type FormReference struct {
 	//   float32 - Rotation Z
 	// Optional.
 	DATA *FormReferenceDATAdata
+}
+
+// returns formref + how many records it ate
+func ParseFormRef(subs []*esm.Subrecord) (*FormReference, int, error) {
+	if subs == nil {
+		return nil, 0, esm.ErrArgumentNil
+	}
+	fr := &FormReference{}
+	processed := 0
+subber:
+	for i := 0; i < len(subs); i++ {
+		sub := subs[i]
+		switch sub.Tag {
+		case FRMR:
+			if fr.FRMR != nil {
+				break subber
+			}
+			fr.FRMR = &FRMRdata{}
+			if err := fr.FRMR.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case NAME:
+			fr.NAME = &NAMEdata{}
+			if err := fr.NAME.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case UNAM:
+			fr.UNAM = &UNAMdata{}
+			if err := fr.UNAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case XSCL:
+			fr.XSCL = &XSCLdata{}
+			if err := fr.XSCL.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case ANAM:
+			fr.ANAM = &ANAMdata{}
+			if err := fr.ANAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case BNAM:
+			fr.BNAM = &BNAMdata{}
+			if err := fr.BNAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+			// todo: finish
+		default:
+			break subber
+		}
+		processed++
+	}
+	return fr, processed, nil
 }

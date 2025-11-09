@@ -7,7 +7,14 @@ import (
 
 	"github.com/ernmw/omwpacker/esm"
 	"github.com/ernmw/omwpacker/esm/internal/util"
+	"github.com/ernmw/omwpacker/esm/record"
 )
+
+type nam0Tagger struct{}
+
+func (t *nam0Tagger) Tag() esm.SubrecordTag { return "NAM0" }
+
+type NAM0data = record.BytesSubrecord[*nam0Tagger]
 
 // CellRecord represents a full CellRecord record composed of subrecords.
 type CellRecord struct {
@@ -218,7 +225,6 @@ func ParseCELL(subs []*esm.Subrecord) (*CellRecord, error) {
 	if subs == nil {
 		return nil, esm.ErrArgumentNil
 	}
-
 	c := &CellRecord{
 		MovedReferences:    []*MoveReference{},
 		PersistentChildren: []*FormReference{},
@@ -264,17 +270,23 @@ func ParseCELL(subs []*esm.Subrecord) (*CellRecord, error) {
 			}
 			c.AMBI = s
 		case MVRF:
-			s := &MVRFdata{}
-			if err := s.Unmarshal(sub); err != nil {
-				return nil, err
+			newMoveRef, consumed, err := ParseMoveRef(subs[i:])
+			if err != nil {
+				return nil, fmt.Errorf("parse form reference: %w", err)
 			}
-			c.MVRF = append(c.MVRF, s)
+			c.MovedReferences = append(c.MovedReferences, newMoveRef)
+			i = i + consumed
 		case FRMR:
-			s := &FRMRdata{}
-			if err := s.Unmarshal(sub); err != nil {
-				return nil, err
+			newFormRef, consumed, err := ParseFormRef(subs[i:])
+			if err != nil {
+				return nil, fmt.Errorf("parse form reference: %w", err)
 			}
-			c.FRMR = append(c.FRMR, s)
+			if c.NAM0 != nil {
+				c.TemporaryChildren = append(c.TemporaryChildren, newFormRef)
+			} else {
+				c.PersistentChildren = append(c.PersistentChildren, newFormRef)
+			}
+			i = i + consumed
 		default:
 			return nil, fmt.Errorf("unknown CELL subrecord %q", sub.Tag)
 		}

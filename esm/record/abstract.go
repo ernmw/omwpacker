@@ -114,3 +114,29 @@ func (s *Uint8Subrecord[T]) Marshal() (*esm.Subrecord, error) {
 	}
 	return &esm.Subrecord{Tag: s.Tag(), Data: []byte{s.Value}}, nil
 }
+
+type BytesSubrecord[T Tagged] struct {
+	Value []byte
+}
+
+func (s *BytesSubrecord[T]) Tag() esm.SubrecordTag {
+	var zero T
+	return zero.Tag()
+}
+
+func (s *BytesSubrecord[T]) Unmarshal(sub *esm.Subrecord) error {
+	if s == nil || sub == nil {
+		return esm.ErrArgumentNil
+	}
+	s.Value = sub.Data
+	return nil
+}
+
+func (s *BytesSubrecord[T]) Marshal() (*esm.Subrecord, error) {
+	buff := new(bytes.Buffer)
+
+	if err := binary.Write(buff, binary.LittleEndian, s.Value); err != nil {
+		return nil, err
+	}
+	return &esm.Subrecord{Tag: s.Tag(), Data: s.Value}, nil
+}

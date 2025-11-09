@@ -71,7 +71,7 @@ func Package(content string) ([]*esm.Subrecord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("fail to marshal LUAF: %w", err)
 		}
-		luasRec, err := (&lua.LUASdata{Path: path}).Marshal()
+		luasRec, err := (&lua.LUASdata{Value: path}).Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("fail to marshal LUAS for %q: %w", path, err)
 		}
