@@ -1,0 +1,12 @@
+[
+  {
+    "Tag": "INTV",
+    "Template": "coord2",
+    "Comment": "Coordinates."
+  },
+  {
+    "Tag": "DATA",
+    "Template": "uint32",
+    "Comment": "Data types included. If the relevant bit isn't set, the related fields will not be loaded, even if present. 0x01 = Includes VNML, VHGT and WNAM. 0x02 = Includes VCLR. 0x04 = Includes VTEX."
+  }
+]
