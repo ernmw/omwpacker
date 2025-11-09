@@ -1,3 +1,4 @@
+//go:generate go run ../generator/gen.go subrecords.json
 package cell
 
 import (
@@ -7,27 +8,20 @@ import (
 
 	"github.com/ernmw/omwpacker/esm"
 	"github.com/ernmw/omwpacker/esm/internal/util"
-	"github.com/ernmw/omwpacker/esm/record"
 )
-
-type nam0Tagger struct{}
-
-func (t *nam0Tagger) Tag() esm.SubrecordTag { return "NAM0" }
-
-type NAM0data = record.Uint32Subrecord[*nam0Tagger]
 
 // CellRecord represents a full CellRecord record composed of subrecords.
 type CellRecord struct {
-	NAME               *NAMEdata
-	DATA               *DATAdata
-	RGNN               *RGNNdata
-	NAM5               *NAM5data
-	WHGT               *WHGTdata
+	NAME               *NAMEField
+	DATA               *DATAField
+	RGNN               *RGNNField
+	NAM5               *NAM5Field
+	WHGT               *WHGTField
 	AMBI               *AMBIdata
 	MovedReferences    []*MoveReference
 	PersistentChildren []*FormReference
 	// Count of temporaray children
-	NAM0              *NAM0data
+	NAM0              *NAM0Field
 	TemporaryChildren []*FormReference
 }
 
@@ -38,11 +32,13 @@ func (c *CellRecord) OrderedRecords() ([]*esm.Subrecord, error) {
 	orderedSubrecords := []*esm.Subrecord{}
 	add := func(p esm.ParsedSubrecord) error {
 		if p != nil {
-			subRec := esm.Subrecord{}
-			if err := subRec.Unmarshal(p); err != nil {
-				return err
+			subRec, err := p.Marshal()
+			if err != nil {
+				return fmt.Errorf("marshal %q to subrec", p.Tag())
 			}
-			orderedSubrecords = append(orderedSubrecords, &subRec)
+			if subRec != nil {
+				orderedSubrecords = append(orderedSubrecords, subRec)
+			}
 		}
 		return nil
 	}
@@ -85,7 +81,7 @@ func (c *CellRecord) OrderedRecords() ([]*esm.Subrecord, error) {
 	tempChildrenCount := uint32(len(c.TemporaryChildren))
 	if tempChildrenCount > 0 {
 		if c.NAM0 == nil {
-			c.NAM0 = &NAM0data{}
+			c.NAM0 = &NAM0Field{}
 		}
 		c.NAM0.Value = uint32(len(c.TemporaryChildren))
 		if err := add(c.NAM0); err != nil {
@@ -105,39 +101,15 @@ func (c *CellRecord) OrderedRecords() ([]*esm.Subrecord, error) {
 	return orderedSubrecords, nil
 }
 
-type NAMEdata struct {
-	Name string
-}
-
-func (s *NAMEdata) Tag() esm.SubrecordTag { return NAME }
-
-func (s *NAMEdata) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	s.Name = string(sub.Data)
-	return nil
-}
-
-func (s *NAMEdata) Marshal() (*esm.Subrecord, error) {
-	buff := new(bytes.Buffer)
-	if _, err := buff.WriteString(s.Name); err != nil {
-		return nil, err
-	}
-	return &esm.Subrecord{Tag: s.Tag(), Data: buff.Bytes()}, nil
-}
-
-// ========== Subrecord: DATA ==========
-
-type DATAdata struct {
+type DATAField struct {
 	Flags uint32
 	GridX int32
 	GridY int32
 }
 
-func (s *DATAdata) Tag() esm.SubrecordTag { return DATA }
+func (s *DATAField) Tag() esm.SubrecordTag { return DATA }
 
-func (s *DATAdata) Unmarshal(sub *esm.Subrecord) error {
+func (s *DATAField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
@@ -150,87 +122,16 @@ func (s *DATAdata) Unmarshal(sub *esm.Subrecord) error {
 	return nil
 }
 
-func (s *DATAdata) Marshal() (*esm.Subrecord, error) {
+func (s *DATAField) Marshal() (*esm.Subrecord, error) {
+	if s == nil {
+		return nil, nil
+	}
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.LittleEndian, s.Flags)
 	binary.Write(buf, binary.LittleEndian, s.GridX)
 	binary.Write(buf, binary.LittleEndian, s.GridY)
 	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
 }
-
-// ========== Subrecord: RGNN ==========
-
-type RGNNdata struct {
-	Value string
-}
-
-func (s *RGNNdata) Tag() esm.SubrecordTag { return RGNN }
-
-func (s *RGNNdata) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	s.Value = string(sub.Data)
-	return nil
-}
-
-func (s *RGNNdata) Marshal() (*esm.Subrecord, error) {
-	buff := new(bytes.Buffer)
-	if _, err := buff.WriteString(s.Value); err != nil {
-		return nil, err
-	}
-	return &esm.Subrecord{Tag: s.Tag(), Data: buff.Bytes()}, nil
-}
-
-// ========== Subrecord: NAM5 ==========
-
-type NAM5data struct {
-	Color [3]uint8
-}
-
-func (s *NAM5data) Tag() esm.SubrecordTag { return NAM5 }
-
-func (s *NAM5data) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	if len(sub.Data) < 3 {
-		return fmt.Errorf("CELL.NAM5 too short: %d < 3", len(sub.Data))
-	}
-	copy(s.Color[:], sub.Data[:3])
-	return nil
-}
-
-func (s *NAM5data) Marshal() (*esm.Subrecord, error) {
-	return &esm.Subrecord{Tag: s.Tag(), Data: s.Color[:]}, nil
-}
-
-// ========== Subrecord: WHGT ==========
-
-type WHGTdata struct {
-	WaterHeight float32
-}
-
-func (s *WHGTdata) Tag() esm.SubrecordTag { return WHGT }
-
-func (s *WHGTdata) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	if len(sub.Data) < 4 {
-		return fmt.Errorf("CELL.WHGT too short")
-	}
-	s.WaterHeight = util.BytesToFloat32(sub.Data[0:4])
-	return nil
-}
-
-func (s *WHGTdata) Marshal() (*esm.Subrecord, error) {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, s.WaterHeight)
-	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
-}
-
-// ========== Subrecord: AMBI ==========
 
 type AMBIdata struct {
 	AmbientColor [3]uint8
@@ -248,45 +149,37 @@ func (s *AMBIdata) Unmarshal(sub *esm.Subrecord) error {
 	if len(sub.Data) < 16 {
 		return fmt.Errorf("CELL.AMBI too short: %d < 16", len(sub.Data))
 	}
-	copy(s.AmbientColor[:], sub.Data[0:3])
-	copy(s.Sunlight[:], sub.Data[3:6])
-	copy(s.FogColor[:], sub.Data[6:9])
-	s.FogDensity = util.BytesToFloat32(sub.Data[12:16])
+	copy(s.AmbientColor[:], sub.Data[0:3]) // 4 is padding
+	copy(s.Sunlight[:], sub.Data[4:7])     // 8 is padding
+	copy(s.FogColor[:], sub.Data[8:11])    // 12 is padding
+	s.FogDensity = util.BytesToFloat32(sub.Data[12:])
 	return nil
 }
 
 func (s *AMBIdata) Marshal() (*esm.Subrecord, error) {
+	if s == nil {
+		return nil, nil
+	}
 	buf := new(bytes.Buffer)
-	buf.Write(s.AmbientColor[:])
-	buf.Write(s.Sunlight[:])
-	buf.Write(s.FogColor[:])
-	buf.Write([]byte{0, 0, 0}) // padding
+	if _, err := buf.Write(s.AmbientColor[:]); err != nil {
+		return nil, err
+	}
+	if err := buf.WriteByte(0); err != nil {
+		return nil, err
+	}
+	if _, err := buf.Write(s.Sunlight[:]); err != nil {
+		return nil, err
+	}
+	if err := buf.WriteByte(0); err != nil {
+		return nil, err
+	}
+	if _, err := buf.Write(s.FogColor[:]); err != nil {
+		return nil, err
+	}
+	if err := buf.WriteByte(0); err != nil {
+		return nil, err
+	}
 	binary.Write(buf, binary.LittleEndian, s.FogDensity)
-	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
-}
-
-// ========== Subrecord: MVRF ==========
-// Moved Reference ID (always uint32)
-type MVRFdata struct {
-	ReferenceID uint32
-}
-
-func (s *MVRFdata) Tag() esm.SubrecordTag { return MVRF }
-
-func (s *MVRFdata) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	if len(sub.Data) < 4 {
-		return fmt.Errorf("CELL.MVRF too short: %d < 4", len(sub.Data))
-	}
-	s.ReferenceID = binary.LittleEndian.Uint32(sub.Data[0:4])
-	return nil
-}
-
-func (s *MVRFdata) Marshal() (*esm.Subrecord, error) {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, s.ReferenceID)
 	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
 }
 
@@ -307,41 +200,35 @@ func ParseCELL(rec *esm.Record) (*CellRecord, error) {
 		sub := rec.Subrecords[i]
 		switch sub.Tag {
 		case NAME:
-			s := &NAMEdata{}
-			if err := s.Unmarshal(sub); err != nil {
+			c.NAME = &NAMEField{}
+			if err := c.NAME.Unmarshal(sub); err != nil {
 				return nil, err
 			}
-			c.NAME = s
 		case DATA:
-			s := &DATAdata{}
-			if err := s.Unmarshal(sub); err != nil {
+			c.DATA = &DATAField{}
+			if err := c.DATA.Unmarshal(sub); err != nil {
 				return nil, err
 			}
-			c.DATA = s
 		case RGNN:
-			s := &RGNNdata{}
-			if err := s.Unmarshal(sub); err != nil {
+			c.RGNN = &RGNNField{}
+			if err := c.RGNN.Unmarshal(sub); err != nil {
 				return nil, err
 			}
-			c.RGNN = s
 		case NAM5:
-			s := &NAM5data{}
-			if err := s.Unmarshal(sub); err != nil {
+			c.NAM5 = &NAM5Field{}
+			if err := c.NAM5.Unmarshal(sub); err != nil {
 				return nil, err
 			}
-			c.NAM5 = s
 		case WHGT:
-			s := &WHGTdata{}
-			if err := s.Unmarshal(sub); err != nil {
+			c.WHGT = &WHGTField{}
+			if err := c.WHGT.Unmarshal(sub); err != nil {
 				return nil, err
 			}
-			c.WHGT = s
 		case AMBI:
-			s := &AMBIdata{}
-			if err := s.Unmarshal(sub); err != nil {
+			c.AMBI = &AMBIdata{}
+			if err := c.AMBI.Unmarshal(sub); err != nil {
 				return nil, err
 			}
-			c.AMBI = s
 		case MVRF:
 			newMoveRef, consumed, err := ParseMoveRef(rec.Subrecords[i:])
 			if err != nil {

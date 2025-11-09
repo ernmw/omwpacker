@@ -56,7 +56,7 @@ func Package(content string) ([]*esm.Subrecord, error) {
 		if attachList == "" || path == "" {
 			return nil, fmt.Errorf("invalid line %d: %q (empty attach or path)", i+1, line)
 		}
-		luaf := &lua.LUAFdata{Targets: []string{}}
+		luaf := &lua.LUAFField{Targets: []string{}}
 		for _, attach := range strings.Split(attachList, ",") {
 			key := strings.ToUpper(strings.TrimSpace(attach))
 			if flag, ok := flagsByName[key]; ok {
@@ -71,7 +71,7 @@ func Package(content string) ([]*esm.Subrecord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("fail to marshal LUAF: %w", err)
 		}
-		luasRec, err := (&lua.LUASdata{Value: path}).Marshal()
+		luasRec, err := (&lua.LUASField{Value: path}).Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("fail to marshal LUAS for %q: %w", path, err)
 		}

@@ -1,0 +1,28 @@
+// {{.Comment}}
+const {{.Tag}} esm.SubrecordTag = "{{fourCC .Tag}}"
+
+// {{.Comment}}
+type {{.Tag}}Field struct{Value float32}
+
+func (t *{{.Tag}}Field) Tag() esm.SubrecordTag { return {{.Tag}} }
+
+func (s *{{.Tag}}Field) Unmarshal(sub *esm.Subrecord) error {
+	if s == nil || sub == nil {
+		return esm.ErrArgumentNil
+	}
+	s.Value = util.BytesToFloat32(sub.Data[0:4])
+	return nil
+}
+
+func (s *{{.Tag}}Field) Marshal() (*esm.Subrecord, error) {
+    if s == nil {
+		return nil, nil
+	}
+
+	buff := new(bytes.Buffer)
+
+	if err := binary.Write(buff, binary.LittleEndian, s.Value); err != nil {
+		return nil, err
+	}
+	return &esm.Subrecord{Tag: s.Tag(), Data: buff.Bytes()}, nil
+}

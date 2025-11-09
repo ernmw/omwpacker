@@ -29,7 +29,10 @@ func newErrTagMismatch(expected SubrecordTag, got SubrecordTag) error {
 
 // ParsedSubrecord is an unmarshalled Subrecord.
 type ParsedSubrecord interface {
+	// Unmarshal sub into this instance.
 	Unmarshal(sub *Subrecord) error
+	// Marshal the parsed subrecord into a raw binary representation.
+	// If this instance is nil, this should return (nil, nil).
 	Marshal() (*Subrecord, error)
 	Tag() SubrecordTag
 }
@@ -56,8 +59,8 @@ func (s *Subrecord) Write(w io.Writer) error {
 	return nil
 }
 
-// Unmarshal the subrecord, saving the data in p.
-func (s *Subrecord) Unmarshal(p ParsedSubrecord) error {
+// UnmarshalTo the parsed subrecord p.
+func (s *Subrecord) UnmarshalTo(p ParsedSubrecord) error {
 	if s == nil {
 		return ErrArgumentNil
 	}

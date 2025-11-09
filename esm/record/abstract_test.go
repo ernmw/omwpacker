@@ -30,7 +30,7 @@ func TestZstring(t *testing.T) {
 	require.Equal(t, esm.SubrecordTag("ANAM"), sub.Tag)
 
 	unmarsh := stringData{}
-	require.NoError(t, sub.Unmarshal(&unmarsh))
+	require.NoError(t, sub.UnmarshalTo(&unmarsh))
 	require.Equal(t, a, unmarsh)
 }
 
@@ -42,7 +42,7 @@ func TestFloat32(t *testing.T) {
 	require.Equal(t, esm.SubrecordTag("ANAM"), sub.Tag)
 
 	unmarsh := floatData{}
-	require.NoError(t, sub.Unmarshal(&unmarsh))
+	require.NoError(t, sub.UnmarshalTo(&unmarsh))
 	require.Equal(t, a, unmarsh)
 }
 
@@ -54,7 +54,7 @@ func TestUint32(t *testing.T) {
 	require.Equal(t, esm.SubrecordTag("ANAM"), sub.Tag)
 
 	unmarsh := intData{}
-	require.NoError(t, sub.Unmarshal(&unmarsh))
+	require.NoError(t, sub.UnmarshalTo(&unmarsh))
 	require.Equal(t, a, unmarsh)
 }
 
@@ -66,6 +66,6 @@ func TestUint8(t *testing.T) {
 	require.Equal(t, esm.SubrecordTag("ANAM"), sub.Tag)
 
 	unmarsh := byteData{}
-	require.NoError(t, sub.Unmarshal(&unmarsh))
+	require.NoError(t, sub.UnmarshalTo(&unmarsh))
 	require.Equal(t, a, unmarsh)
 }

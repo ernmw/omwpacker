@@ -1,170 +1,63 @@
 package cell
 
 import (
+	"fmt"
+
 	"github.com/ernmw/omwpacker/esm"
-	"github.com/ernmw/omwpacker/esm/record"
 )
-
-type frmrTagger struct{}
-
-func (t *frmrTagger) Tag() esm.SubrecordTag { return "FRMR" }
-
-type FRMRdata = record.Uint32Subrecord[*frmrTagger]
-
-type anamTagger struct{}
-
-func (t *anamTagger) Tag() esm.SubrecordTag { return "ANAM" }
-
-type ANAMdata = record.ZstringSubrecord[*anamTagger]
-
-type bnamTagger struct{}
-
-func (t *bnamTagger) Tag() esm.SubrecordTag { return "BNAM" }
-
-type BNAMdata = record.ZstringSubrecord[*bnamTagger]
-
-type unamTagger struct{}
-
-func (t *unamTagger) Tag() esm.SubrecordTag { return "UNAM" }
-
-type UNAMdata = record.Uint8Subrecord[*unamTagger]
-
-type xsclTagger struct{}
-
-func (t *xsclTagger) Tag() esm.SubrecordTag { return "XSCL" }
-
-type XSCLdata = record.Float32Subrecord[*xsclTagger]
-
-type cnamTagger struct{}
-
-func (t *cnamTagger) Tag() esm.SubrecordTag { return "CNAM" }
-
-type CNAMdata = record.ZstringSubrecord[*cnamTagger]
-
-type indxTagger struct{}
-
-func (t *indxTagger) Tag() esm.SubrecordTag { return "INDX" }
-
-type INDXdata = record.Uint32Subrecord[*indxTagger]
-
-type xsolTagger struct{}
-
-func (t *xsolTagger) Tag() esm.SubrecordTag { return "XSOL" }
-
-type XSOLdata = record.ZstringSubrecord[*xsolTagger]
-
-type xchgTagger struct{}
-
-func (t *xchgTagger) Tag() esm.SubrecordTag { return "XCHG" }
-
-type XCHGdata = record.Float32Subrecord[*xchgTagger]
-
-type nam9Tagger struct{}
-
-func (t *nam9Tagger) Tag() esm.SubrecordTag { return "NAM9" }
-
-type NAM9data = record.Uint32Subrecord[*nam9Tagger]
-
-type dnamTagger struct{}
-
-func (t *dnamTagger) Tag() esm.SubrecordTag { return "DNAM" }
-
-type DNAMdata = record.ZstringSubrecord[*dnamTagger]
-
-type fltvTagger struct{}
-
-func (t *fltvTagger) Tag() esm.SubrecordTag { return "FLTV" }
-
-type FLTVdata = record.Uint32Subrecord[*fltvTagger]
-
-type knamTagger struct{}
-
-func (t *knamTagger) Tag() esm.SubrecordTag { return "KNAM" }
-
-type KNAMdata = record.ZstringSubrecord[*knamTagger]
-
-type tnamTagger struct{}
-
-func (t *tnamTagger) Tag() esm.SubrecordTag { return "TNAM" }
-
-type TNAMdata = record.ZstringSubrecord[*tnamTagger]
-
-type znamTagger struct{}
-
-func (t *znamTagger) Tag() esm.SubrecordTag { return "ZNAM" }
-
-type ZNAMdata = record.Uint8Subrecord[*znamTagger]
-
-type intvTagger struct{}
-
-func (t *intvTagger) Tag() esm.SubrecordTag { return "INTV" }
-
-type INTVdata = record.BytesSubrecord[*intvTagger]
-
-type dodtTagger struct{}
-
-func (t *dodtTagger) Tag() esm.SubrecordTag { return "DODT" }
-
-type DODTdata = record.BytesSubrecord[*dodtTagger]
-
-type formReferenceDATAtagger struct{}
-
-func (t *formReferenceDATAtagger) Tag() esm.SubrecordTag { return "DATA" }
-
-type FormReferenceDATAdata = record.BytesSubrecord[*formReferenceDATAtagger]
 
 // References to objects in cells are listed as part of the cell data, each beginning with FRMR and NAME fields, followed by a list of fields specific to the object type.
 type FormReference struct {
 	// Reference ID.
 	// Type: uint32
 	// Required.
-	FRMR *FRMRdata
+	FRMR *FRMRField
 	// Object ID or "PlayerSaveGame".
 	// zstring
 	// Required.
-	NAME *NAMEdata
+	NAME *NAMEField
 	// Reference blocked (value is always 0; present if Blocked is set in the reference's record header, otherwise absent).
 	// uint8
 	// Optional.
-	UNAM *UNAMdata
+	UNAM *UNAMField
 	// Reference's scale, if applicable and not 1.0.
 	// float32
 	// Optional.
-	XSCL *XSCLdata
+	XSCL *XSCLField
 	// NPC ID, if applicable (NPC-only).
 	// zstring
 	// Optional, exclusive with BNAM.
-	ANAM *ANAMdata
+	ANAM *ANAMField
 	// Global variable name
 	// zstring
 	// Optional, exclusive with ANAM.
-	BNAM *BNAMdata
+	BNAM *BNAMField
 	// Faction ID (not light, NPC, or static)
 	// zstring
 	// Optional, if present then INDX must also exist.
-	CNAM *CNAMdata
+	CNAM *CNAMField
 	// Faction rank.
 	// uint32
 	// Optional, if present then CNAM must also exist.
-	INDX *INDXdata
+	INDX *INDXField
 	// ID of soul in gem (soul gems only)
 	// zstring
 	// Optional.
-	XSOL *XSOLdata
+	XSOL *XSOLField
 	// Enchantment charge (charged items with non-zero charges).
 	// float32
 	// Optional.
-	XCHG *XCHGdata
+	XCHG *XCHGField
 	// Depends on the object type.
 	//   uint32 - health remaining (weapons and armor)
 	//   uint32 - uses remaining (locks, probes, repair items)
 	//   float32 - time remaining (lights)
 	// Optional.
-	INTV *INTVdata
+	INTV *INTVField
 	// Value (in gold)
 	// uint32
 	// Optional.
-	NAM9 *NAM9data
+	NAM9 *NAM9Field
 	// Cell Travel Destination (Rotations are in radians)
 	//   float32 - Position X
 	//   float32 - Position Y
@@ -173,27 +66,26 @@ type FormReference struct {
 	//   float32 - Rotation Y
 	//   float32 - Rotation Z
 	// Optional.
-	DODT *DODTdata
-	// Cell name for previous DODT, if interior.
+	DODT *DODTField // Cell name for previous DODT, if interior.
 	// zstring
 	// Optional, must accompany DODT if present.
-	DNAM *DNAMdata
+	DNAM *DNAMField
 	// Lock difficulty
 	// uint32
 	// Optional.
-	FLTV *FLTVdata
+	FLTV *FLTVField
 	// Key name
 	// zstring
 	// Optional.
-	KNAM *KNAMdata
+	KNAM *KNAMField
 	// Trap name
 	// zstring
 	// Optional.
-	TNAM *TNAMdata
+	TNAM *TNAMField
 	// Reference is disabled (always 0). Like UNAM, this will be emitted if the relevant flag is set in the reference's record header. This may only be possible via scripting. Also, even if present in the file, the field appears to be ignored on loading.
 	// uint8
 	// Optional.
-	ZNAM *ZNAMdata
+	ZNAM *ZNAMField
 	// Reference position (Rotations are in radians)
 	//   float32 - Position X
 	//   float32 - Position Y
@@ -202,7 +94,7 @@ type FormReference struct {
 	//   float32 - Rotation Y
 	//   float32 - Rotation Z
 	// Optional.
-	DATA *FormReferenceDATAdata
+	DATA *DATAFormReferenceField
 }
 
 func (f *FormReference) OrderedRecords() ([]*esm.Subrecord, error) {
@@ -212,11 +104,13 @@ func (f *FormReference) OrderedRecords() ([]*esm.Subrecord, error) {
 	orderedSubrecords := []*esm.Subrecord{}
 	add := func(p esm.ParsedSubrecord) error {
 		if p != nil {
-			subRec := esm.Subrecord{}
-			if err := subRec.Unmarshal(p); err != nil {
-				return err
+			subRec, err := p.Marshal()
+			if err != nil {
+				return fmt.Errorf("marshal %q to subrec", p.Tag())
 			}
-			orderedSubrecords = append(orderedSubrecords, &subRec)
+			if subRec != nil {
+				orderedSubrecords = append(orderedSubrecords, subRec)
+			}
 		}
 		return nil
 	}
@@ -293,36 +187,100 @@ subber:
 			if fr.FRMR != nil {
 				break subber
 			}
-			fr.FRMR = &FRMRdata{}
+			fr.FRMR = &FRMRField{}
 			if err := fr.FRMR.Unmarshal(sub); err != nil {
 				return nil, 0, err
 			}
 		case NAME:
-			fr.NAME = &NAMEdata{}
+			fr.NAME = &NAMEField{}
 			if err := fr.NAME.Unmarshal(sub); err != nil {
 				return nil, 0, err
 			}
 		case UNAM:
-			fr.UNAM = &UNAMdata{}
+			fr.UNAM = &UNAMField{}
 			if err := fr.UNAM.Unmarshal(sub); err != nil {
 				return nil, 0, err
 			}
 		case XSCL:
-			fr.XSCL = &XSCLdata{}
+			fr.XSCL = &XSCLField{}
 			if err := fr.XSCL.Unmarshal(sub); err != nil {
 				return nil, 0, err
 			}
 		case ANAM:
-			fr.ANAM = &ANAMdata{}
+			fr.ANAM = &ANAMField{}
 			if err := fr.ANAM.Unmarshal(sub); err != nil {
 				return nil, 0, err
 			}
 		case BNAM:
-			fr.BNAM = &BNAMdata{}
+			fr.BNAM = &BNAMField{}
 			if err := fr.BNAM.Unmarshal(sub); err != nil {
 				return nil, 0, err
 			}
-			// todo: finish
+		case CNAM:
+			fr.CNAM = &CNAMField{}
+			if err := fr.CNAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case INDX:
+			fr.INDX = &INDXField{}
+			if err := fr.INDX.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case XSOL:
+			fr.XSOL = &XSOLField{}
+			if err := fr.XSOL.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case XCHG:
+			fr.XCHG = &XCHGField{}
+			if err := fr.XCHG.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case INTV:
+			fr.INTV = &INTVField{}
+			if err := fr.INTV.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case NAM9:
+			fr.NAM9 = &NAM9Field{}
+			if err := fr.NAM9.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case DODT:
+			fr.DODT = &DODTField{}
+			if err := fr.DODT.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case DNAM:
+			fr.DNAM = &DNAMField{}
+			if err := fr.DNAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case FLTV:
+			fr.FLTV = &FLTVField{}
+			if err := fr.FLTV.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case KNAM:
+			fr.KNAM = &KNAMField{}
+			if err := fr.KNAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case TNAM:
+			fr.TNAM = &TNAMField{}
+			if err := fr.TNAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case ZNAM:
+			fr.ZNAM = &ZNAMField{}
+			if err := fr.ZNAM.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
+		case DATAFormReference:
+			fr.DATA = &DATAFormReferenceField{}
+			if err := fr.DATA.Unmarshal(sub); err != nil {
+				return nil, 0, err
+			}
 		default:
 			break subber
 		}
