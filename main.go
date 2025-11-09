@@ -13,7 +13,8 @@ import (
 	"golang.org/x/term"
 
 	"github.com/ernmw/omwpacker/esm"
-	"github.com/ernmw/omwpacker/esm/tags"
+	"github.com/ernmw/omwpacker/esm/record/lua"
+	"github.com/ernmw/omwpacker/esm/record/tes3"
 	"github.com/ernmw/omwpacker/omwscripts"
 )
 
@@ -34,15 +35,15 @@ func pack(inPath, outPath string) error {
 		}
 		// delete existing luaf/luas subrecords
 		for _, rec := range outRecords {
-			if rec.Tag == tags.LUAL {
+			if rec.Tag == lua.LUAL {
 				rec.Subrecords = slices.DeleteFunc(rec.Subrecords, func(e *esm.Subrecord) bool {
-					return e.Tag == tags.LUAF || e.Tag == tags.LUAS
+					return e.Tag == lua.LUAF || e.Tag == lua.LUAS
 				})
 			}
 		}
 	} else {
 		// make new empty records
-		firstRec, err := esm.NewTES3Record("", "Made with https://github.com/ernmw/omwpacker/")
+		firstRec, err := tes3.NewTES3Record("", "Made with https://github.com/ernmw/omwpacker/")
 		if err != nil {
 			return fmt.Errorf("Failed to make empty recs: %v", err)
 		}
@@ -60,7 +61,7 @@ func pack(inPath, outPath string) error {
 
 	found := false
 	for _, rec := range outRecords {
-		if rec.Tag == tags.LUAL {
+		if rec.Tag == lua.LUAL {
 			found = true
 			rec.Subrecords = append(rec.Subrecords, subRecs...)
 		}
@@ -68,7 +69,7 @@ func pack(inPath, outPath string) error {
 	if !found {
 		// make new lual
 		outRecords = append(outRecords, &esm.Record{
-			Tag:        tags.LUAL,
+			Tag:        lua.LUAL,
 			Subrecords: subRecs,
 		})
 	}
