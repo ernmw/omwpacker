@@ -2,12 +2,9 @@
 package cell
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/ernmw/omwpacker/esm"
-	"github.com/ernmw/omwpacker/esm/internal/util"
 )
 
 // CellRecord represents a full CellRecord record composed of subrecords.
@@ -17,7 +14,7 @@ type CellRecord struct {
 	RGNN               *RGNNField
 	NAM5               *NAM5Field
 	WHGT               *WHGTField
-	AMBI               *AMBIdata
+	AMBI               *AMBIField
 	MovedReferences    []*MoveReference
 	PersistentChildren []*FormReference
 	// Count of temporaray children
@@ -101,88 +98,6 @@ func (c *CellRecord) OrderedRecords() ([]*esm.Subrecord, error) {
 	return orderedSubrecords, nil
 }
 
-type DATAField struct {
-	Flags uint32
-	GridX int32
-	GridY int32
-}
-
-func (s *DATAField) Tag() esm.SubrecordTag { return DATA }
-
-func (s *DATAField) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	if len(sub.Data) < 12 {
-		return fmt.Errorf("CELL.DATA too short: %d < 12", len(sub.Data))
-	}
-	s.Flags = binary.LittleEndian.Uint32(sub.Data[0:4])
-	s.GridX = int32(binary.LittleEndian.Uint32(sub.Data[4:8]))
-	s.GridY = int32(binary.LittleEndian.Uint32(sub.Data[8:12]))
-	return nil
-}
-
-func (s *DATAField) Marshal() (*esm.Subrecord, error) {
-	if s == nil {
-		return nil, nil
-	}
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, s.Flags)
-	binary.Write(buf, binary.LittleEndian, s.GridX)
-	binary.Write(buf, binary.LittleEndian, s.GridY)
-	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
-}
-
-type AMBIdata struct {
-	AmbientColor [3]uint8
-	Sunlight     [3]uint8
-	FogColor     [3]uint8
-	FogDensity   float32
-}
-
-func (s *AMBIdata) Tag() esm.SubrecordTag { return AMBI }
-
-func (s *AMBIdata) Unmarshal(sub *esm.Subrecord) error {
-	if s == nil || sub == nil {
-		return esm.ErrArgumentNil
-	}
-	if len(sub.Data) < 16 {
-		return fmt.Errorf("CELL.AMBI too short: %d < 16", len(sub.Data))
-	}
-	copy(s.AmbientColor[:], sub.Data[0:3]) // 4 is padding
-	copy(s.Sunlight[:], sub.Data[4:7])     // 8 is padding
-	copy(s.FogColor[:], sub.Data[8:11])    // 12 is padding
-	s.FogDensity = util.BytesToFloat32(sub.Data[12:])
-	return nil
-}
-
-func (s *AMBIdata) Marshal() (*esm.Subrecord, error) {
-	if s == nil {
-		return nil, nil
-	}
-	buf := new(bytes.Buffer)
-	if _, err := buf.Write(s.AmbientColor[:]); err != nil {
-		return nil, err
-	}
-	if err := buf.WriteByte(0); err != nil {
-		return nil, err
-	}
-	if _, err := buf.Write(s.Sunlight[:]); err != nil {
-		return nil, err
-	}
-	if err := buf.WriteByte(0); err != nil {
-		return nil, err
-	}
-	if _, err := buf.Write(s.FogColor[:]); err != nil {
-		return nil, err
-	}
-	if err := buf.WriteByte(0); err != nil {
-		return nil, err
-	}
-	binary.Write(buf, binary.LittleEndian, s.FogDensity)
-	return &esm.Subrecord{Tag: s.Tag(), Data: buf.Bytes()}, nil
-}
-
 // ParseCELL builds a CELL record from a list of subrecords.
 func ParseCELL(rec *esm.Record) (*CellRecord, error) {
 	if rec == nil {
@@ -225,7 +140,7 @@ func ParseCELL(rec *esm.Record) (*CellRecord, error) {
 				return nil, err
 			}
 		case AMBI:
-			c.AMBI = &AMBIdata{}
+			c.AMBI = &AMBIField{}
 			if err := c.AMBI.Unmarshal(sub); err != nil {
 				return nil, err
 			}
