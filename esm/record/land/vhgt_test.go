@@ -31,9 +31,9 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 
 	// --- Allocate target struct and backing grid ---
 	heights := make([][]*ByteField, size)
-	for y := 0; y < size; y++ {
+	for y := range size {
 		heights[y] = make([]*ByteField, size)
-		for x := 0; x < size; x++ {
+		for x := range size {
 			heights[y][x] = new(ByteField)
 		}
 	}
@@ -51,8 +51,8 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 	}
 
 	// Verify some sample height values
-	for y := 0; y < 3; y++ {
-		for x := 0; x < 3; x++ {
+	for y := range 3 {
+		for x := range 3 {
 			got := byte(*field.Heights[y][x])
 			want := gridBytes[y*size+x]
 			if got != want {
