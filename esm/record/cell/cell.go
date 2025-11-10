@@ -7,6 +7,9 @@ import (
 	"github.com/ernmw/omwpacker/esm"
 )
 
+// Cell handles https://en.uesp.net/wiki/Morrowind_Mod:Mod_File_Format/CELL
+const CELL esm.RecordTag = "CELL"
+
 // CellRecord represents a full CellRecord record composed of subrecords.
 type CellRecord struct {
 	NAME               *NAMEField
