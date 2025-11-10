@@ -27,11 +27,11 @@ func FillGridFromBytes[T BinaryFieldZero](grid [][]T, width, height int, data []
 	}
 
 	offset := 0
-	for y := 0; y < height; y++ {
+	for y := range height {
 		if len(grid[y]) != width {
 			return fmt.Errorf("row %d width mismatch: got %d, want %d", y, len(grid[y]), width)
 		}
-		for x := 0; x < width; x++ {
+		for x := range width {
 			elem := grid[y][x]
 			copy(elem.Data(), data[offset:offset+elemSize])
 			offset += elemSize
@@ -55,11 +55,11 @@ func FlattenGrid[T BinaryFieldZero](grid [][]T, width, height int, out []byte) e
 	}
 
 	offset := 0
-	for y := 0; y < height; y++ {
+	for y := range height {
 		if len(grid[y]) != width {
 			return fmt.Errorf("row %d width mismatch: got %d, want %d", y, len(grid[y]), width)
 		}
-		for x := 0; x < width; x++ {
+		for x := range width {
 			elem := grid[y][x]
 			copy(out[offset:offset+elemSize], elem.Data())
 			offset += elemSize

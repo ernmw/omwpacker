@@ -32,8 +32,7 @@ func BytesToFloat32(bytes []byte) float32 {
 }
 
 func Float32ToBytes(float float32) []byte {
-	bits := math.Float32bits(float)
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint32(bytes, bits)
+	bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bytes, math.Float32bits(float))
 	return bytes
 }

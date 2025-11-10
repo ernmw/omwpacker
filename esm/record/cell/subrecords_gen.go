@@ -602,13 +602,7 @@ func (s *XCHGField) Marshal() (*esm.Subrecord, error) {
 	if s == nil {
 		return nil, nil
 	}
-
-	buff := new(bytes.Buffer)
-
-	if err := binary.Write(buff, binary.LittleEndian, s.Value); err != nil {
-		return nil, err
-	}
-	return &esm.Subrecord{Tag: s.Tag(), Data: buff.Bytes()}, nil
+	return &esm.Subrecord{Tag: s.Tag(), Data: util.Float32ToBytes(s.Value)}, nil
 }
 
 // Reference is disabled flag (always 0, present if the relevant flag is set in the header).
@@ -660,13 +654,7 @@ func (s *XSCLField) Marshal() (*esm.Subrecord, error) {
 	if s == nil {
 		return nil, nil
 	}
-
-	buff := new(bytes.Buffer)
-
-	if err := binary.Write(buff, binary.LittleEndian, s.Value); err != nil {
-		return nil, err
-	}
-	return &esm.Subrecord{Tag: s.Tag(), Data: buff.Bytes()}, nil
+	return &esm.Subrecord{Tag: s.Tag(), Data: util.Float32ToBytes(s.Value)}, nil
 }
 
 // Reference blocked flag (always 0, present if Blocked is set in the header).
@@ -718,13 +706,7 @@ func (s *WHGTField) Marshal() (*esm.Subrecord, error) {
 	if s == nil {
 		return nil, nil
 	}
-
-	buff := new(bytes.Buffer)
-
-	if err := binary.Write(buff, binary.LittleEndian, s.Value); err != nil {
-		return nil, err
-	}
-	return &esm.Subrecord{Tag: s.Tag(), Data: buff.Bytes()}, nil
+	return &esm.Subrecord{Tag: s.Tag(), Data: util.Float32ToBytes(s.Value)}, nil
 }
 
 // ID of soul in gem (soul gems only).
