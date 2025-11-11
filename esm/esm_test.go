@@ -12,6 +12,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func getSubrecord(r *esm.Record, tag esm.SubrecordTag) *esm.Subrecord {
+	for _, s := range r.Subrecords {
+		if s.Tag == tag {
+			return s
+		}
+	}
+	return nil
+}
+
 func TestLUAL(t *testing.T) {
 	// read the test file
 	inputFile := path.Join("testdata", "LUAL.omwaddon")
@@ -33,7 +42,7 @@ func TestLUAL(t *testing.T) {
 	require.Equal(t, records, reread)
 
 	t.Run("header", func(t *testing.T) {
-		sub := records[0].GetSubrecord(tes3.HEDR)
+		sub := getSubrecord(records[0], tes3.HEDR)
 		require.NotNil(t, sub)
 		h := &tes3.HEDRdata{}
 		require.NoError(t, sub.UnmarshalTo(h))
@@ -68,7 +77,7 @@ func TestCELL(t *testing.T) {
 	require.Equal(t, records, reread)
 
 	t.Run("header", func(t *testing.T) {
-		sub := records[0].GetSubrecord(tes3.HEDR)
+		sub := getSubrecord(records[0], tes3.HEDR)
 		require.NotNil(t, sub)
 		h := &tes3.HEDRdata{}
 		require.NoError(t, sub.UnmarshalTo(h))

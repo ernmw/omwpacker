@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"unicode"
 
+	"github.com/ernmw/omwpacker/cfg"
 	"github.com/ernmw/omwpacker/esm"
 	"github.com/spf13/pflag"
 	"go.coder.com/cli"
@@ -16,20 +20,22 @@ import (
 type readCmd struct {
 	record    string // -r record
 	subrecord string // -s subrecord
+	filter    string // -f subrecordtag=string
 }
 
 func (cmd *readCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:    "read",
-		Usage:   "<input> [-r record] [-s subrecord]",
+		Usage:   "<input> [-r record] [-s subrecord] [-f subrecordtag=string]",
 		Aliases: []string{"r"},
-		Desc:    "Read and display contents of an .omwaddon/.esp/.esp.",
+		Desc:    "Read and display contents of an .omwaddon/.esp/.esp/openmw.cfg/morrowind.ini.",
 	}
 }
 
 func (cmd *readCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVarP(&cmd.record, "record", "r", "", "Filter to records of the given type.")
-	fl.StringVarP(&cmd.subrecord, "subrecord", "s", "", "Filter to subrecords of the given type.")
+	fl.StringVarP(&cmd.record, "record", "r", "", "Display records of the given type.")
+	fl.StringVarP(&cmd.subrecord, "subrecord", "s", "", "Display subrecords of the given type.")
+	fl.StringVarP(&cmd.filter, "filter", "f", "", "Filter records to those that contain the given subrecord, and that subrecord contains the provided string. Example: NAME=Balmora")
 }
 
 func (cmd *readCmd) Run(fl *pflag.FlagSet) {
@@ -67,22 +73,75 @@ func (cmd *readCmd) Run(fl *pflag.FlagSet) {
 		subrecFilter = func(sub *esm.Subrecord) bool { return true }
 	}
 
-	if err := cmd.readCommand(inPath, recFilter, subrecFilter); err != nil {
-		fmt.Printf("💀 Failed: %v\n", err)
-		os.Exit(1)
+	// set up filter
+	var filter func(rec *esm.Record) bool
+	if len(cmd.record) > 0 {
+		tokens := strings.SplitN(cmd.filter, "=", 2)
+		name := esm.SubrecordTag(strings.ToUpper(tokens[0]))
+		sub := []byte(tokens[1])
+		filter = func(rec *esm.Record) bool {
+			return slices.ContainsFunc(rec.Subrecords, func(s *esm.Subrecord) bool {
+				if s.Tag != name {
+					return false
+				}
+				if len(sub) > 0 {
+					return bytes.Contains(s.Data, sub)
+				}
+				return true
+			})
+		}
+	} else {
+		filter = func(rec *esm.Record) bool { return true }
 	}
+
+	combinedRecordFilter := func(rec *esm.Record) bool {
+		return recFilter(rec) && filter(rec)
+	}
+
+	var plugins []cfg.PluginEntry
+
+	if strings.EqualFold(filepath.Ext(inPath), ".ini") {
+		var err error
+		plugins, err = cfg.MWPlugins(inPath)
+		if err != nil {
+			fmt.Printf("💀 Failed: %q couldn't be parsed: %v\n", inPath, err)
+			os.Exit(1)
+		}
+	} else if strings.EqualFold(filepath.Ext(inPath), ".cfg") {
+		var err error
+		plugins, err = cfg.OpenMWPlugins(inPath)
+		if err != nil {
+			fmt.Printf("💀 Failed: %q couldn't be parsed: %v\n", inPath, err)
+			os.Exit(1)
+		}
+	} else {
+		plugins = []cfg.PluginEntry{{
+			Name: filepath.Base(inPath),
+			Path: inPath,
+		}}
+	}
+	for _, plugin := range plugins {
+		if err := cmd.readCommand(
+			&plugin,
+			combinedRecordFilter,
+			subrecFilter); err != nil {
+			fmt.Printf("💀 Failed parsing %s: %v\n", plugin.Name, err)
+			os.Exit(1)
+		}
+	}
+
 	fmt.Printf("🩷 Done reading %q\n", inPath)
 }
 
 func (cmd *readCmd) readCommand(
-	inPath string,
+	in *cfg.PluginEntry,
 	recordFilter func(rec *esm.Record) bool,
 	subrecordFilter func(sub *esm.Subrecord) bool,
 ) error {
 
-	inRecords, err := esm.ParsePluginFile(inPath)
+	inRecords, err := esm.ParsePluginFile(in.Path)
 	if err != nil {
-		return fmt.Errorf("failed to parse %q: %w", inPath, err)
+		return fmt.Errorf("failed to parse %q: %w", in.Path, err)
 	}
 
 	width := 120
@@ -97,13 +156,19 @@ func (cmd *readCmd) readCommand(
 		if !recordFilter(rec) {
 			continue
 		}
-		fmt.Printf("%s:\n", rec.Tag)
+		headerPrinted := false
 		for _, subRec := range rec.Subrecords {
 			if !subrecordFilter(subRec) {
 				continue
 			}
+			if !headerPrinted {
+				fmt.Printf("\n%s: (%s)\n", rec.Tag, in.Name)
+				headerPrinted = true
+			}
 			fmt.Printf("  %s:\n", subRec.Tag)
-			_ = printHex(width, subRec.Data)
+			if err = printHex(width, subRec.Data); err != nil {
+				return fmt.Errorf("printing %s/%s from %q", rec.Tag, subRec.Tag, in.Path)
+			}
 		}
 	}
 	return nil
