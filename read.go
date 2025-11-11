@@ -29,7 +29,7 @@ func (cmd *readCmd) Spec() cli.CommandSpec {
 		Name:    "read",
 		Usage:   "<input> [-r record] [-s subrecord] [-f subrecordtag=string]",
 		Aliases: []string{"r"},
-		Desc:    "Read and display contents of an .omwaddon/.esp/.esp/openmw.cfg/morrowind.ini.",
+		Desc:    "Read and display contents of an .omwaddon/.esp/.esp/openmw.cfg.",
 	}
 }
 
