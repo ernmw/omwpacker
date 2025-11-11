@@ -1,9 +1,21 @@
-package land
+package util
 
 import (
 	"bytes"
 	"testing"
+	"unsafe"
 )
+
+type byteField uint8
+
+func (b *byteField) Data() []byte {
+	// Return a 1-byte slice pointing to the underlying ByteField.
+	return unsafe.Slice((*byte)(b), 1)
+}
+
+func (b *byteField) ByteSize() int {
+	return 1
+}
 
 func TestZeroAllocGrid_ByteField(t *testing.T) {
 	width, height := 3, 2
@@ -12,11 +24,11 @@ func TestZeroAllocGrid_ByteField(t *testing.T) {
 	data := []byte{0, 1, 2, 3, 4, 5}
 
 	// Create grid of ByteField pointers
-	grid := make([][]*ByteField, height)
+	grid := make([][]*byteField, height)
 	for y := range grid {
-		grid[y] = make([]*ByteField, width)
+		grid[y] = make([]*byteField, width)
 		for x := range grid[y] {
-			grid[y][x] = new(ByteField)
+			grid[y][x] = new(byteField)
 		}
 	}
 

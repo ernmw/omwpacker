@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/ernmw/omwpacker/esm"
+	"github.com/ernmw/omwpacker/esm/internal/util"
 )
 
 const vtexSize = int(16)
@@ -35,7 +36,7 @@ func (s *VTEXField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	if err := FillGridFromBytes(s.Vertices, vtexSize, vtexSize, sub.Data); err != nil {
+	if err := util.FillGridFromBytes(s.Vertices, vtexSize, vtexSize, sub.Data); err != nil {
 		return fmt.Errorf("parsing 2d array: %w", err)
 	}
 	return nil
@@ -46,7 +47,7 @@ func (s *VTEXField) Marshal() (*esm.Subrecord, error) {
 		return nil, nil
 	}
 	outBuff := make([]byte, 2*vtexSize*vtexSize)
-	if err := FlattenGrid(s.Vertices, vtexSize, vtexSize, outBuff); err != nil {
+	if err := util.FlattenGrid(s.Vertices, vtexSize, vtexSize, outBuff); err != nil {
 		return nil, fmt.Errorf("flatten grid: %w", err)
 	}
 	return &esm.Subrecord{Tag: s.Tag(), Data: outBuff}, nil

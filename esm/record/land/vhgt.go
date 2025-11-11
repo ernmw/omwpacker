@@ -32,7 +32,7 @@ func (s *VHGTField) Unmarshal(sub *esm.Subrecord) error {
 		return esm.ErrArgumentNil
 	}
 	s.Offset = util.BytesToFloat32(sub.Data[0:4])
-	if err := FillGridFromBytes(s.Heights, vhgtSize, vhgtSize, sub.Data[4:]); err != nil {
+	if err := util.FillGridFromBytes(s.Heights, vhgtSize, vhgtSize, sub.Data[4:]); err != nil {
 		return fmt.Errorf("parsing 2d array: %w", err)
 	}
 	return nil
@@ -47,7 +47,7 @@ func (s *VHGTField) Marshal() (*esm.Subrecord, error) {
 
 	copy(outBuff, util.Float32ToBytes(s.Offset))
 
-	if err := FlattenGrid(s.Heights, vhgtSize, vhgtSize, outBuff[4:gridSize+4]); err != nil {
+	if err := util.FlattenGrid(s.Heights, vhgtSize, vhgtSize, outBuff[4:gridSize+4]); err != nil {
 		return nil, fmt.Errorf("flatten grid: %w", err)
 	}
 
