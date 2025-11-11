@@ -1,3 +1,4 @@
+// Package cfg contains some AI Go ports of openmw configuration logic.
 package cfg
 
 import (
@@ -7,11 +8,6 @@ import (
 	"path"
 	"path/filepath"
 )
-
-type PluginEntry struct {
-	Name string // lowercased basename
-	Path string // full path
-}
 
 func findRoot(cfgPath string) (string, error) {
 
