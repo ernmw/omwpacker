@@ -1,0 +1,17 @@
+[
+  {
+    "Tag": "NAME",
+    "Template": "zstring",
+    "Comment": "ID string."
+  },
+  {
+    "Tag": "INTV",
+    "Template": "uint32",
+    "Comment": "Index."
+  },
+  {
+    "Tag": "DATA",
+    "Template": "zstring",
+    "Comment": "Texture filename."
+  }
+]

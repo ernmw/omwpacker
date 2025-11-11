@@ -1,4 +1,4 @@
-package land
+package util
 
 import (
 	"fmt"

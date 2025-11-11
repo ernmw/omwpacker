@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/ernmw/omwpacker/esm"
+	"github.com/ernmw/omwpacker/esm/internal/util"
 )
 
 const wnamSize = 9
@@ -35,7 +36,7 @@ func (s *WNAMField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	if err := FillGridFromBytes(s.Heights, wnamSize, wnamSize, sub.Data); err != nil {
+	if err := util.FillGridFromBytes(s.Heights, wnamSize, wnamSize, sub.Data); err != nil {
 		return fmt.Errorf("parsing 2d array")
 	}
 	return nil
@@ -46,7 +47,7 @@ func (s *WNAMField) Marshal() (*esm.Subrecord, error) {
 		return nil, nil
 	}
 	outBuff := make([]byte, 1*wnamSize*wnamSize)
-	if err := FlattenGrid(s.Heights, wnamSize, wnamSize, outBuff); err != nil {
+	if err := util.FlattenGrid(s.Heights, wnamSize, wnamSize, outBuff); err != nil {
 		return nil, fmt.Errorf("flatten grid: %w", err)
 	}
 	return &esm.Subrecord{Tag: s.Tag(), Data: outBuff}, nil

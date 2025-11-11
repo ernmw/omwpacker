@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/ernmw/omwpacker/esm"
+	"github.com/ernmw/omwpacker/esm/internal/util"
 )
 
 const vclrSize = int(65)
@@ -50,7 +51,7 @@ func (s *VCLRField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	if err := FillGridFromBytes(s.Colors, vclrSize, vclrSize, sub.Data); err != nil {
+	if err := util.FillGridFromBytes(s.Colors, vclrSize, vclrSize, sub.Data); err != nil {
 		return fmt.Errorf("parsing 2d array: %w", err)
 	}
 	return nil
@@ -61,7 +62,7 @@ func (s *VCLRField) Marshal() (*esm.Subrecord, error) {
 		return nil, nil
 	}
 	outBuff := make([]byte, vclrDepth*vclrSize*vclrSize)
-	if err := FlattenGrid(s.Colors, vclrSize, vclrSize, outBuff); err != nil {
+	if err := util.FlattenGrid(s.Colors, vclrSize, vclrSize, outBuff); err != nil {
 		return nil, fmt.Errorf("flatten grid: %w", err)
 	}
 	return &esm.Subrecord{Tag: s.Tag(), Data: outBuff}, nil

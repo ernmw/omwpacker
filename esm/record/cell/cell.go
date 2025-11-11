@@ -1,3 +1,5 @@
+// CELL records contain information about cells (both interior and exterior).
+//
 //go:generate go run ../generator/gen.go subrecords.json
 package cell
 
