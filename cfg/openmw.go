@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// OpenMWPlugins loads all plugins and data paths by reading openmw.cfg files
-// recursively, respecting OpenMW’s replace/config semantics and token rules.
+// OpenMWPlugins now returns resolved plugin absolute paths (searching data dirs),
+// plus dataPaths (BSAs first, then folders).
 func OpenMWPlugins(path string) ([]string, []string, error) {
 	cfgPath, err := findRoot(path)
 	if err != nil {
@@ -23,27 +23,116 @@ func OpenMWPlugins(path string) ([]string, []string, error) {
 		return nil, nil, err
 	}
 
-	// OpenMW merges lowest → highest; child configs override parent.
-	// We built in call order, so contexts is already ascending priority order.
-
-	var plugins []string
-	var bsaArchives, dataDirs, userData, dataLocal []string
+	// Build ordered data directories list (lowest -> highest priority),
+	// and list of BSAs (lowest priority).
+	var bsaArchives []string
+	var dataDirs []string
+	var userData []string
+	var dataLocal []string
 
 	for _, ctx := range contexts {
-		plugins = append(plugins, ctx.plugins...)
 		bsaArchives = append(bsaArchives, ctx.bsaArchives...)
 		dataDirs = append(dataDirs, ctx.dataDirs...)
 		userData = append(userData, ctx.userData...)
 		dataLocal = append(dataLocal, ctx.dataLocal...)
 	}
 
-	// BSAs appear first (lowest priority)
-	dataPaths := append([]string{}, bsaArchives...)
+	// Compose dataPaths: BSAs first, then folders, then userdata, then data-local
+	dataPaths := make([]string, 0, len(bsaArchives)+len(dataDirs)+len(userData)+len(dataLocal))
+	dataPaths = append(dataPaths, bsaArchives...)
 	dataPaths = append(dataPaths, dataDirs...)
 	dataPaths = append(dataPaths, userData...)
 	dataPaths = append(dataPaths, dataLocal...)
 
-	return plugins, dataPaths, nil
+	// Resolve plugin names to absolute paths by searching dataDirs in order
+	pluginPaths := resolvePluginNames(contexts, dataDirs)
+
+	return pluginPaths, dataPaths, nil
+}
+
+// resolvePluginNames resolves plugin names declared in contexts into absolute
+// file paths by searching the provided dataDirs in order (lowest -> highest).
+func resolvePluginNames(contexts []configContext, dataDirs []string) []string {
+	var resolved []string
+
+	// iterate contexts in order (lowest -> highest priority) and collect plugin names in that order
+	for _, ctx := range contexts {
+		for _, pluginName := range ctx.pluginNames {
+			// If pluginName already contains a path separator or is absolute, resolve it directly
+			cleanName := strings.TrimSpace(pluginName)
+			cleanName = strings.Trim(cleanName, "\"") // remove quotes if present
+			cleanName = expandTokens(cleanName)
+
+			if filepath.IsAbs(cleanName) || strings.ContainsAny(cleanName, string(os.PathSeparator)+"/") {
+				// Absolute or path: return absolute path (resolve relative to config if not absolute)
+				abs := cleanName
+				if !filepath.IsAbs(abs) {
+					abs = filepath.Join(ctx.baseDir, abs)
+				}
+				if p, err := filepath.Abs(abs); err == nil {
+					resolved = append(resolved, p)
+					continue
+				}
+				// fallback: use as-is
+				resolved = append(resolved, abs)
+				continue
+			}
+
+			// Otherwise search each dataDir for the file
+			found := ""
+			for _, d := range dataDirs {
+				candidate := filepath.Join(d, cleanName)
+				if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() {
+					if p, err := filepath.Abs(candidate); err == nil {
+						found = p
+					} else {
+						found = candidate
+					}
+					break
+				}
+				// case-insensitive fallback: check dir entries
+				if dirEntries, err := os.ReadDir(d); err == nil {
+					lowerWant := strings.ToLower(cleanName)
+					for _, e := range dirEntries {
+						if strings.ToLower(e.Name()) == lowerWant {
+							candidate = filepath.Join(d, e.Name())
+							if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() {
+								if p, err := filepath.Abs(candidate); err == nil {
+									found = p
+								} else {
+									found = candidate
+								}
+								break
+							}
+						}
+					}
+					if found != "" {
+						break
+					}
+				}
+			}
+
+			if found != "" {
+				resolved = append(resolved, found)
+				continue
+			}
+
+			// Not found in dataDirs: last resort - resolve relative to the context's cfg directory.
+			backupCandidate := filepath.Join(ctx.baseDir, cleanName)
+			if fi, err := os.Stat(backupCandidate); err == nil && !fi.IsDir() {
+				if p, err := filepath.Abs(backupCandidate); err == nil {
+					resolved = append(resolved, p)
+				} else {
+					resolved = append(resolved, backupCandidate)
+				}
+			} else {
+				// Not found anywhere: still append the plugin name (unresolved)
+				resolved = append(resolved, cleanName)
+			}
+		}
+	}
+
+	return resolved
 }
 
 type configContext struct {
@@ -53,7 +142,7 @@ type configContext struct {
 	dataLocal     []string
 	userData      []string
 	bsaArchives   []string
-	plugins       []string
+	pluginNames   []string // store plugin *names* as declared (not resolved)
 	nestedConfigs []string
 	replaceConfig bool
 }
@@ -116,8 +205,8 @@ func loadConfigRecursive(cfgPath string, contexts *[]configContext, visited map[
 		case "content":
 			ext := strings.ToLower(filepath.Ext(val))
 			if ext == ".esm" || ext == ".esp" || ext == ".omwaddon" {
-				abs := verifyPath(cfgPath, val)
-				ctx.plugins = append(ctx.plugins, abs)
+				// keep the raw name — we'll resolve later using data dirs
+				ctx.pluginNames = append(ctx.pluginNames, val)
 			}
 		}
 	}
