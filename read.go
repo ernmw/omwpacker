@@ -82,12 +82,8 @@ func (cmd *readCmd) Run(fl *pflag.FlagSet) {
 
 	// set up filter
 	var filter func(rec *esm.Record) bool
-	if len(cmd.record) > 0 {
-		tokens := strings.SplitN(cmd.filter, "=", 2)
-		if len(tokens) < 2 {
-			fmt.Printf("💀 Failed: Filter %q is wrong.\n", cmd.filter)
-			os.Exit(1)
-		}
+	tokens := strings.SplitN(cmd.filter, "=", 2)
+	if len(cmd.filter) > 0 && len(tokens) == 2 {
 		name := esm.SubrecordTag(strings.ToUpper(tokens[0]))
 		sub := []byte(tokens[1])
 		if strings.HasPrefix(tokens[1], "0x") {

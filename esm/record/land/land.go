@@ -3,6 +3,8 @@
 // colors, and a smaller 16x16 array of textures. It also defines a 9x9 array
 // of heights that the game can load to quickly build the world map.
 //
+// https://github.com/OpenMW/openmw/blob/429305401ee7486f160cb1bbd2196fc80d33dc3a/components/esm3/loadland.cpp
+//
 //go:generate go run ../generator/gen.go subrecords.json
 package land
 
