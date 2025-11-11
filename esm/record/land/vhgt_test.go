@@ -80,3 +80,29 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 		t.Fatal("marshaled data mismatch (excluding junk)")
 	}
 }
+
+func TestComputeAbsoluteHeights(t *testing.T) {
+	// Make a synthetic VHGTField where all deltas are 1
+	rows := make([][]*ByteField, vhgtSize)
+	for y := range vhgtSize {
+		row := make([]*ByteField, vhgtSize)
+		for x := range vhgtSize {
+			val := ByteField(1)
+			row[x] = &val
+		}
+		rows[y] = row
+	}
+
+	v := &VHGTField{
+		Offset:  0.0,
+		Heights: rows,
+	}
+
+	hmap := v.ComputeAbsoluteHeights()
+	if hmap[0][0] != 8.0 {
+		t.Fatalf("expected 8.0, got %v", hmap[0][0])
+	}
+	if hmap[vhgtSize-1][vhgtSize-1] <= 0 {
+		t.Fatalf("expected positive height at end, got %v", hmap[vhgtSize-1][vhgtSize-1])
+	}
+}

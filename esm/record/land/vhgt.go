@@ -55,3 +55,45 @@ func (s *VHGTField) Marshal() (*esm.Subrecord, error) {
 
 	return &esm.Subrecord{Tag: s.Tag(), Data: outBuff}, nil
 }
+
+// LandHeightScale is the factor OpenMW uses to scale VHGT heights.
+// (From OpenMW’s Land::sHeightScale = 8.0f)
+const LandHeightScale = 8.0
+
+// ComputeAbsoluteHeights reconstructs the absolute height map from the
+// differential VHGT data and returns a 65×65 [][]float32 slice.
+// Each value already includes the Offset and height deltas.
+//
+// The resulting matrix follows the same bottom-up Y order as the
+// stored VHGT data, i.e. [0][0] corresponds to the bottom-left corner.
+func (s *VHGTField) ComputeAbsoluteHeights() [][]float32 {
+	if s == nil || len(s.Heights) == 0 {
+		return nil
+	}
+
+	heights := make([][]float32, vhgtSize)
+	for i := range heights {
+		heights[i] = make([]float32, vhgtSize)
+	}
+
+	// Start from the offset
+	rowOffset := s.Offset
+
+	for y := range vhgtSize {
+		// First column of each row
+		rowOffset += float32(*s.Heights[y][0])
+		colOffset := rowOffset
+
+		h := colOffset * LandHeightScale
+		heights[y][0] = h
+
+		// Remaining columns in row
+		for x := 1; x < vhgtSize; x++ {
+			colOffset += float32(*s.Heights[y][x])
+			h := colOffset * LandHeightScale
+			heights[y][x] = h
+		}
+	}
+
+	return heights
+}
