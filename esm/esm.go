@@ -176,38 +176,6 @@ func readNextRecord(pluginName string, f io.ReadSeeker) (*Record, error) {
 	return rec, nil
 }
 
-// GetSubrecord returns the first subrecord with the matching tag.
-func (r *Record) GetSubrecord(tag SubrecordTag) *Subrecord {
-	for _, s := range r.Subrecords {
-		if s.Tag == tag {
-			return s
-		}
-	}
-	return nil
-}
-
-// UpsertSubrecord replaces or inserts the subrecord.
-func (r *Record) UpsertSubrecord(s *Subrecord) {
-	// replace first occurrence or append
-	for i, ex := range r.Subrecords {
-		if ex.Tag == s.Tag {
-			r.Subrecords[i] = s
-			return
-		}
-	}
-	r.Subrecords = append(r.Subrecords, s)
-}
-
-// DeleteSubrecord deletes the first subrecord with the matching tag.
-func (r *Record) DeleteSubrecord(tag SubrecordTag) {
-	for i, ex := range r.Subrecords {
-		if ex.Tag == tag {
-			r.Subrecords = append(r.Subrecords[:i], r.Subrecords[i+1:]...)
-			return
-		}
-	}
-}
-
 // ParsePluginFile extracts records from some esm or omwaddon file.
 // See https://en.uesp.net/wiki/Morrowind_Mod:Mod_File_Format
 func ParsePluginFile(path string) ([]*Record, error) {
