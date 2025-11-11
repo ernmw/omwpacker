@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/ernmw/omwpacker/esm"
 	"github.com/spf13/pflag"
@@ -104,6 +105,42 @@ func (cmd *readCmd) readCommand(
 			fmt.Printf("  %s:\n", subRec.Tag)
 			_ = printHex(width, subRec.Data)
 		}
+	}
+	return nil
+}
+
+// printHex prints binary data with ASCII row above hex row (terminal-friendly).
+func printHex(width int, dump []byte) error {
+	// Each byte = "xx " -> 3 columns
+	bytesPerLine := width / 3
+	if bytesPerLine > 32 {
+		bytesPerLine = 32
+	} else if bytesPerLine < 4 {
+		bytesPerLine = 4
+	}
+
+	for i := 0; i < len(dump); i += bytesPerLine {
+		end := i + bytesPerLine
+		if end > len(dump) {
+			end = len(dump)
+		}
+		line := dump[i:end]
+
+		// ASCII row
+		for _, b := range line {
+			if unicode.IsPrint(rune(b)) {
+				fmt.Printf(" %c ", b)
+			} else {
+				fmt.Printf(" . ")
+			}
+		}
+		fmt.Println()
+
+		// Hex row
+		for _, b := range line {
+			fmt.Printf("%02x ", b)
+		}
+		fmt.Println()
 	}
 	return nil
 }
