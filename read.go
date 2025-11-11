@@ -113,16 +113,9 @@ func (cmd *readCmd) Run(fl *pflag.FlagSet) {
 		return recFilter(rec) && filter(rec)
 	}
 
-	var plugins []cfg.PluginEntry
+	var plugins []string
 
-	if strings.EqualFold(filepath.Ext(inPath), ".ini") {
-		var err error
-		plugins, err = cfg.MWPlugins(inPath)
-		if err != nil {
-			fmt.Printf("💀 Failed: %q couldn't be parsed: %v\n", inPath, err)
-			os.Exit(1)
-		}
-	} else if strings.EqualFold(filepath.Ext(inPath), ".cfg") {
+	if strings.EqualFold(filepath.Ext(inPath), ".cfg") {
 		var err error
 		plugins, _, err = cfg.OpenMWPlugins(inPath)
 		if err != nil {
@@ -130,17 +123,14 @@ func (cmd *readCmd) Run(fl *pflag.FlagSet) {
 			os.Exit(1)
 		}
 	} else {
-		plugins = []cfg.PluginEntry{{
-			Name: filepath.Base(inPath),
-			Path: inPath,
-		}}
+		plugins = []string{inPath}
 	}
 	for _, plugin := range plugins {
 		if err := cmd.readCommand(
-			&plugin,
+			plugin,
 			combinedRecordFilter,
 			subrecFilter); err != nil {
-			fmt.Printf("💀 Failed parsing %s: %v\n", plugin.Name, err)
+			fmt.Printf("💀 Failed parsing %s: %v\n", plugin, err)
 			os.Exit(1)
 		}
 	}
@@ -149,14 +139,14 @@ func (cmd *readCmd) Run(fl *pflag.FlagSet) {
 }
 
 func (cmd *readCmd) readCommand(
-	in *cfg.PluginEntry,
+	in string,
 	recordFilter func(rec *esm.Record) bool,
 	subrecordFilter func(sub *esm.Subrecord) bool,
 ) error {
 
-	inRecords, err := esm.ParsePluginFile(in.Path)
+	inRecords, err := esm.ParsePluginFile(in)
 	if err != nil {
-		return fmt.Errorf("failed to parse %q: %w", in.Path, err)
+		return fmt.Errorf("failed to parse %q: %w", in, err)
 	}
 
 	width := 120
@@ -177,12 +167,12 @@ func (cmd *readCmd) readCommand(
 				continue
 			}
 			if !headerPrinted {
-				fmt.Printf("\n%s: (%s)\n", rec.Tag, in.Name)
+				fmt.Printf("\n%s: (%s)\n", rec.Tag, filepath.Base(in))
 				headerPrinted = true
 			}
 			fmt.Printf("  %s:\n", subRec.Tag)
 			if err = printHex(width, subRec.Data); err != nil {
-				return fmt.Errorf("printing %s/%s from %q", rec.Tag, subRec.Tag, in.Path)
+				return fmt.Errorf("printing %s/%s from %q", rec.Tag, subRec.Tag, in)
 			}
 		}
 	}
