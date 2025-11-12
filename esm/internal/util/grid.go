@@ -1,69 +1,54 @@
 package util
 
-import (
-	"fmt"
-)
+import "fmt"
 
-// BinaryFieldZero represents an element with a slice of underlying bytes.
-type BinaryFieldZero interface {
-	// Data returns the underlying slice that represents this element
-	// in memory. Must be exactly ByteSize() long.
-	Data() []byte
-	ByteSize() int
+// SliceAsGrid views a 1D slice as a 2D grid of the given width.
+func SliceAsGrid[T any](width int, s []T) ([][]T, error) {
+	if width <= 0 {
+		return nil, fmt.Errorf("width must be positive, got %d", width)
+	}
+
+	if len(s)%width != 0 {
+		return nil, fmt.Errorf("slice length %d is not a multiple of width %d", len(s), width)
+	}
+
+	height := len(s) / width
+	grid := make([][]T, height)
+
+	// Manually create slice headers that all point back to the original underlying array (s)
+	for i := range height {
+		start := i * width
+		end := start + width
+		grid[i] = s[start:end]
+	}
+
+	return grid, nil
 }
 
-// FillGridFromBytes fills a 2D grid of BinaryFieldZero elements
-// from a flat byte slice. Data is copied directly into each element's backing slice.
-func FillGridFromBytes[T BinaryFieldZero](grid [][]T, width, height int, data []byte) error {
-	if len(grid) != height {
-		return fmt.Errorf("grid height mismatch: got %d, want %d", len(grid), height)
-	}
-	if height == 0 || width == 0 {
-		return nil
-	}
-	elemSize := grid[0][0].ByteSize()
-	if len(data) < width*height*elemSize {
-		return fmt.Errorf("not enough data: need %d, got %d", width*height*elemSize, len(data))
+// GridAsSlice flattens a 2D grid (slice of slices) into a single 1D slice.
+// This operation is NOT zero-copy because the inner slices of a [][]T are
+// not guaranteed to be contiguous in memory, and typically are not.
+func GridAsSlice[T any](grid [][]T) ([]T, error) {
+	if len(grid) == 0 {
+		return []T{}, nil
 	}
 
-	offset := 0
-	for y := range height {
-		if len(grid[y]) != width {
-			return fmt.Errorf("row %d width mismatch: got %d, want %d", y, len(grid[y]), width)
+	// confirm sizes are the same
+	width := len(grid[0])
+	for _, row := range grid[1:] {
+		if len(row) != width {
+			return nil, fmt.Errorf("mismatched inner slices lengths %d and %d", width, len(row))
 		}
-		for x := range width {
-			elem := grid[y][x]
-			copy(elem.Data(), data[offset:offset+elemSize])
-			offset += elemSize
-		}
-	}
-	return nil
-}
-
-// FlattenGrid returns a single []byte slice pointing to the grid's elements.
-// It requires a preallocated output buffer of size width*height*elemSize.
-func FlattenGrid[T BinaryFieldZero](grid [][]T, width, height int, out []byte) error {
-	if len(grid) != height {
-		return fmt.Errorf("grid height mismatch: got %d, want %d", len(grid), height)
-	}
-	if height == 0 || width == 0 {
-		return nil
-	}
-	elemSize := grid[0][0].ByteSize()
-	if len(out) < width*height*elemSize {
-		return fmt.Errorf("output buffer too small: need %d, got %d", width*height*elemSize, len(out))
 	}
 
-	offset := 0
-	for y := range height {
-		if len(grid[y]) != width {
-			return fmt.Errorf("row %d width mismatch: got %d, want %d", y, len(grid[y]), width)
-		}
-		for x := range width {
-			elem := grid[y][x]
-			copy(out[offset:offset+elemSize], elem.Data())
-			offset += elemSize
-		}
+	// Copy values out.
+	result := make([]T, len(grid)*width)
+	for i, row := range grid {
+		// Determine the start index in the result slice
+		start := i * width
+		// Copy the row elements into the pre-allocated result slice
+		copy(result[start:start+width], row)
 	}
-	return nil
+
+	return result, nil
 }

@@ -3,26 +3,31 @@ package land
 import (
 	"bytes"
 	"testing"
+	"unsafe"
 
 	"github.com/ernmw/omwpacker/esm"
+	"github.com/stretchr/testify/require"
 )
+
+func TestVNMLSize(t *testing.T) {
+	require.Equal(t, int(3), int(unsafe.Sizeof(VertexField{})))
+}
 
 func TestVNMLFieldUnmarshalMarshal(t *testing.T) {
 	const size = vnmlSize
-	const depth = vnmlDepth
 
 	// Prepare flat input data: sequential bytes 0..(65*65*3-1)
-	input := make([]byte, size*size*depth)
+	input := make([]byte, size*size*3)
 	for i := range input {
 		input[i] = byte(i % 128) // keep in int8 range
 	}
 
 	// Create a 65x65 grid of VertexField pointers
-	vertices := make([][]*VertexField, size)
+	vertices := make([][]VertexField, size)
 	for y := range size {
-		vertices[y] = make([]*VertexField, size)
+		vertices[y] = make([]VertexField, size)
 		for x := range size {
-			vertices[y][x] = &VertexField{}
+			vertices[y][x] = VertexField{}
 		}
 	}
 
@@ -39,15 +44,15 @@ func TestVNMLFieldUnmarshalMarshal(t *testing.T) {
 	for y := range 3 {
 		for x := range 3 {
 			vertex := field.Vertices[y][x]
-			offset := (y*size + x) * depth
-			if vertex.GetX() != int8(input[offset]) {
-				t.Fatalf("vertex[%d][%d].X = %d, want %d", y, x, vertex.GetX(), input[offset])
+			offset := (y*size + x) * 3
+			if vertex.X != int8(input[offset]) {
+				t.Fatalf("vertex[%d][%d].X = %d, want %d", y, x, vertex.X, input[offset])
 			}
-			if vertex.GetY() != int8(input[offset+1]) {
-				t.Fatalf("vertex[%d][%d].Y = %d, want %d", y, x, vertex.GetY(), input[offset+1])
+			if vertex.Y != int8(input[offset+1]) {
+				t.Fatalf("vertex[%d][%d].Y = %d, want %d", y, x, vertex.Y, input[offset+1])
 			}
-			if vertex.GetZ() != int8(input[offset+2]) {
-				t.Fatalf("vertex[%d][%d].Z = %d, want %d", y, x, vertex.GetZ(), input[offset+2])
+			if vertex.Z != int8(input[offset+2]) {
+				t.Fatalf("vertex[%d][%d].Z = %d, want %d", y, x, vertex.Z, input[offset+2])
 			}
 		}
 	}

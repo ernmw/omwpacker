@@ -11,12 +11,11 @@ import (
 
 func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 	const size = vhgtSize
-	const depth = vhgtDepth
 
 	// --- Construct synthetic input buffer ---
 
 	offsetVal := float32(123.456)
-	gridBytes := make([]byte, size*size*depth)
+	gridBytes := make([]byte, size*size)
 	for i := range gridBytes {
 		gridBytes[i] = byte(i % 127) // int8-compatible test data
 	}
@@ -30,11 +29,11 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 	sub := &esm.Subrecord{Tag: VHGT, Data: buf}
 
 	// --- Allocate target struct and backing grid ---
-	heights := make([][]*ByteField, size)
+	heights := make([][]int8, size)
 	for y := range size {
-		heights[y] = make([]*ByteField, size)
+		heights[y] = make([]int8, size)
 		for x := range size {
-			heights[y][x] = new(ByteField)
+			heights[y][x] = 0
 		}
 	}
 
@@ -53,7 +52,7 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 	// Verify some sample height values
 	for y := range 3 {
 		for x := range 3 {
-			got := byte(*field.Heights[y][x])
+			got := byte(field.Heights[y][x])
 			want := gridBytes[y*size+x]
 			if got != want {
 				t.Fatalf("Heights[%d][%d] = %d, want %d", y, x, got, want)
@@ -83,12 +82,11 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 
 func TestComputeAbsoluteHeights(t *testing.T) {
 	// Make a synthetic VHGTField where all deltas are 1
-	rows := make([][]*ByteField, vhgtSize)
+	rows := make([][]int8, vhgtSize)
 	for y := range vhgtSize {
-		row := make([]*ByteField, vhgtSize)
+		row := make([]int8, vhgtSize)
 		for x := range vhgtSize {
-			val := ByteField(1)
-			row[x] = &val
+			row[x] = 1
 		}
 		rows[y] = row
 	}
