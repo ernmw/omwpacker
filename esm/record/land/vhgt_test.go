@@ -29,9 +29,9 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 	sub := &esm.Subrecord{Tag: VHGT, Data: buf}
 
 	// --- Allocate target struct and backing grid ---
-	heights := make([][]uint8, size)
+	heights := make([][]int8, size)
 	for y := range size {
-		heights[y] = make([]uint8, size)
+		heights[y] = make([]int8, size)
 		for x := range size {
 			heights[y][x] = 0
 		}
@@ -82,9 +82,9 @@ func TestVHGTField_UnmarshalMarshal(t *testing.T) {
 
 func TestComputeAbsoluteHeights(t *testing.T) {
 	// Make a synthetic VHGTField where all deltas are 1
-	rows := make([][]uint8, vhgtSize)
+	rows := make([][]int8, vhgtSize)
 	for y := range vhgtSize {
-		row := make([]uint8, vhgtSize)
+		row := make([]int8, vhgtSize)
 		for x := range vhgtSize {
 			row[x] = 1
 		}

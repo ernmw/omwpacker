@@ -21,7 +21,7 @@ type VHGTField struct {
 	// The height data is not absolute values but uses differences between adjacent pixels.
 	// Thus a pixel value of 0 means it has the same height as the last pixel.
 	// Note that the Y-direction of the data is from the bottom up.
-	Heights [][]uint8
+	Heights [][]int8
 }
 
 func (s *VHGTField) Tag() esm.SubrecordTag { return VHGT }
@@ -32,7 +32,12 @@ func (s *VHGTField) Unmarshal(sub *esm.Subrecord) error {
 	}
 	s.Offset = util.BytesToFloat32(sub.Data[0:4])
 	var err error
-	s.Heights, err = util.SliceAsGrid(vhgtSize, sub.Data[4:len(sub.Data)-3])
+
+	heightSlice, err := util.SliceFromBytes[int8](vhgtSize*vhgtSize, sub.Data[4:len(sub.Data)-3])
+	if err != nil {
+		return fmt.Errorf("slice from bytes: %w", err)
+	}
+	s.Heights, err = util.SliceAsGrid(vhgtSize, heightSlice)
 	if err != nil {
 		return fmt.Errorf("slice as grid: %w", err)
 	}
@@ -48,11 +53,15 @@ func (s *VHGTField) Marshal() (*esm.Subrecord, error) {
 
 	copy(outBuff, util.Float32ToBytes(s.Offset))
 
-	outData, err := util.GridAsSlice(s.Heights)
+	heightSlice, err := util.GridAsSlice(s.Heights)
 	if err != nil {
 		return nil, fmt.Errorf("grid as slice: %w", err)
 	}
-	copy(outBuff[1:], outData[:])
+	outData, err := util.BytesFromSlice(heightSlice)
+	if err != nil {
+		return nil, fmt.Errorf("bytes from slice: %w", err)
+	}
+	copy(outBuff[4:], outData[:])
 
 	// last 3 bytes are junk
 
