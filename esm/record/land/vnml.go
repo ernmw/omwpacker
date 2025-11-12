@@ -51,9 +51,12 @@ func (s *VNMLField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	if err := util.FillGridFromBytes(s.Vertices, vnmlSize, vnmlSize, sub.Data); err != nil {
+	var err error
+	s.Vertices, err = util.GridFromBytes[*VertexField](vnmlSize, vnmlSize, sub.Data)
+	if err != nil {
 		return fmt.Errorf("parsing 2d array: %w", err)
 	}
+
 	return nil
 }
 

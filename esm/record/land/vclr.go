@@ -51,7 +51,9 @@ func (s *VCLRField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	if err := util.FillGridFromBytes(s.Colors, vclrSize, vclrSize, sub.Data); err != nil {
+	var err error
+	s.Colors, err = util.GridFromBytes[*ColorField](vclrSize, vclrSize, sub.Data)
+	if err != nil {
 		return fmt.Errorf("parsing 2d array: %w", err)
 	}
 	return nil

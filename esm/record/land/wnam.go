@@ -14,6 +14,9 @@ const wnamSize = 9
 type ByteField uint8
 
 func (b *ByteField) Data() []byte {
+	if b == nil {
+		return nil
+	}
 	// Return a 1-byte slice pointing to the underlying ByteField.
 	return unsafe.Slice((*byte)(b), 1)
 }
@@ -36,8 +39,10 @@ func (s *WNAMField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	if err := util.FillGridFromBytes(s.Heights, wnamSize, wnamSize, sub.Data); err != nil {
-		return fmt.Errorf("parsing 2d array")
+	var err error
+	s.Heights, err = util.GridFromBytes[*ByteField](wnamSize, wnamSize, sub.Data)
+	if err != nil {
+		return fmt.Errorf("parsing 2d array: %w", err)
 	}
 	return nil
 }

@@ -1,0 +1,37 @@
+// {{.Comment}}
+const {{.Tag}} esm.SubrecordTag = "{{fourCC .Tag}}"
+
+// {{.Comment}}
+type {{.Tag}}Field struct {
+	Grid [][]{{.Grid.ElementType}}
+}
+
+func (s *{{.Tag}}Field) Tag() esm.SubrecordTag { return {{.Tag}} }
+
+func (s *{{.Tag}}Field) Unmarshal(sub *esm.Subrecord) error {
+	if s == nil || sub == nil {
+		return esm.ErrArgumentNil
+	}
+	s.Grid = make([][]{{.Grid.ElementType}}, {{.Grid.Height}})
+	for y := range {{.Grid.Height}} {
+		s.Grid[y] = make([]{{.Grid.ElementType}}, {{.Grid.Width}})
+		for x := range {{.Grid.Width}} {
+			s.Grid[y][x] = new({{.Grid.ElementType}})
+		}
+	}
+	if err := util.FillGridFromBytes(s.Grid, {{.Grid.Width}}, {{.Grid.Height}}, sub.Data); err != nil {
+		return fmt.Errorf("parsing grid: %w", err)
+	}
+	return nil
+}
+
+func (s *{{.Tag}}Field) Marshal() (*esm.Subrecord, error) {
+	if s == nil {
+		return nil, nil
+	}
+	outBuff := make([]byte, {{.Grid.Width}}*{{.Grid.Height}}*s.Grid[0][0].ByteSize())
+	if err := util.FlattenGrid(s.Grid, {{.Grid.Width}}, {{.Grid.Height}}, outBuff); err != nil {
+		return nil, fmt.Errorf("flatten grid: %w", err)
+	}
+	return &esm.Subrecord{Tag: s.Tag(), Data: outBuff}, nil
+}

@@ -36,7 +36,9 @@ func (s *VTEXField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	if err := util.FillGridFromBytes(s.Vertices, vtexSize, vtexSize, sub.Data); err != nil {
+	var err error
+	s.Vertices, err = util.GridFromBytes[*UInt16Field](vtexSize, vtexSize, sub.Data)
+	if err != nil {
 		return fmt.Errorf("parsing 2d array: %w", err)
 	}
 	return nil
