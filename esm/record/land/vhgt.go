@@ -8,7 +8,6 @@ import (
 )
 
 const vhgtSize = int(65)
-const vhgtDepth = int(1)
 
 // Height data.
 const VHGT = esm.SubrecordTag("VHGT")
@@ -22,7 +21,7 @@ type VHGTField struct {
 	// The height data is not absolute values but uses differences between adjacent pixels.
 	// Thus a pixel value of 0 means it has the same height as the last pixel.
 	// Note that the Y-direction of the data is from the bottom up.
-	Heights [][]*ByteField
+	Heights [][]uint8
 }
 
 func (s *VHGTField) Tag() esm.SubrecordTag { return VHGT }
@@ -33,9 +32,9 @@ func (s *VHGTField) Unmarshal(sub *esm.Subrecord) error {
 	}
 	s.Offset = util.BytesToFloat32(sub.Data[0:4])
 	var err error
-	s.Heights, err = util.GridFromBytes[*ByteField](vhgtSize, vhgtSize, sub.Data)
+	s.Heights, err = util.SliceAsGrid(vhgtSize, sub.Data[4:len(sub.Data)-3])
 	if err != nil {
-		return fmt.Errorf("parsing 2d array: %w", err)
+		return fmt.Errorf("slice as grid: %w", err)
 	}
 	return nil
 }
@@ -49,9 +48,11 @@ func (s *VHGTField) Marshal() (*esm.Subrecord, error) {
 
 	copy(outBuff, util.Float32ToBytes(s.Offset))
 
-	if err := util.FlattenGrid(s.Heights, vhgtSize, vhgtSize, outBuff[4:gridSize+4]); err != nil {
-		return nil, fmt.Errorf("flatten grid: %w", err)
+	outData, err := util.GridAsSlice(s.Heights)
+	if err != nil {
+		return nil, fmt.Errorf("grid as slice: %w", err)
 	}
+	copy(outBuff[1:], outData[:])
 
 	// last 3 bytes are junk
 
@@ -83,7 +84,7 @@ func (s *VHGTField) ComputeAbsoluteHeights() [][]float32 {
 
 	for y := range vhgtSize {
 		// First column of each row
-		rowOffset += float32(*s.Heights[y][0])
+		rowOffset += float32(s.Heights[y][0])
 		colOffset := rowOffset
 
 		h := colOffset * LandHeightScale
@@ -91,7 +92,7 @@ func (s *VHGTField) ComputeAbsoluteHeights() [][]float32 {
 
 		// Remaining columns in row
 		for x := 1; x < vhgtSize; x++ {
-			colOffset += float32(*s.Heights[y][x])
+			colOffset += float32(s.Heights[y][x])
 			h := colOffset * LandHeightScale
 			heights[y][x] = h
 		}

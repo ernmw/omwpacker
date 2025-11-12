@@ -3,37 +3,17 @@ package land
 import (
 	"fmt"
 
-	"unsafe"
-
 	"github.com/ernmw/omwpacker/esm"
 	"github.com/ernmw/omwpacker/esm/internal/util"
 )
 
 const vnmlSize = int(65)
-const vnmlDepth = int(3)
 
 // VertexField represents a 3-component int8 vertex
-type VertexField [vnmlDepth]int8
-
-// Data returns a []byte slice pointing to the underlying bytes of the VertexField.
-// Zero-allocation: no new slices are created.
-func (v *VertexField) Data() []byte {
-	return unsafe.Slice((*byte)(unsafe.Pointer(v)), len(v))
-}
-
-// ByteSize returns the number of bytes in the VertexField (always 3)
-func (v *VertexField) ByteSize() int {
-	return len(v)
-}
-
-func (v *VertexField) GetX() int8 {
-	return v[0]
-}
-func (v *VertexField) GetY() int8 {
-	return v[1]
-}
-func (v *VertexField) GetZ() int8 {
-	return v[2]
+type VertexField struct {
+	X int8
+	Y int8
+	Z int8
 }
 
 // Vertex Normals. A 65×65 array of: int8 - X, int8 - Y, int8 - Z.
@@ -42,7 +22,7 @@ const VNML = esm.SubrecordTag("VNML")
 
 // Heights for world map. Derived from VHGT data.
 type VNMLField struct {
-	Vertices [][]*VertexField
+	Vertices [][]VertexField
 }
 
 func (s *VNMLField) Tag() esm.SubrecordTag { return VNML }
@@ -51,12 +31,14 @@ func (s *VNMLField) Unmarshal(sub *esm.Subrecord) error {
 	if s == nil || sub == nil {
 		return esm.ErrArgumentNil
 	}
-	var err error
-	s.Vertices, err = util.GridFromBytes[*VertexField](vnmlSize, vnmlSize, sub.Data)
+	vertexSlice, err := util.SliceFromBytes[VertexField](vnmlSize*vnmlSize, sub.Data)
 	if err != nil {
-		return fmt.Errorf("parsing 2d array: %w", err)
+		return fmt.Errorf("slice from bytes: %w", err)
 	}
-
+	s.Vertices, err = util.SliceAsGrid(vnmlSize, vertexSlice)
+	if err != nil {
+		return fmt.Errorf("slice as grid: %w", err)
+	}
 	return nil
 }
 
@@ -64,9 +46,13 @@ func (s *VNMLField) Marshal() (*esm.Subrecord, error) {
 	if s == nil {
 		return nil, nil
 	}
-	outBuff := make([]byte, vnmlDepth*vnmlSize*vnmlSize)
-	if err := util.FlattenGrid(s.Vertices, vnmlSize, vnmlSize, outBuff); err != nil {
-		return nil, fmt.Errorf("flatten grid: %w", err)
+	vertexSlice, err := util.GridAsSlice(s.Vertices)
+	if err != nil {
+		return nil, fmt.Errorf("grid as slice: %w", err)
 	}
-	return &esm.Subrecord{Tag: s.Tag(), Data: outBuff}, nil
+	outData, err := util.BytesFromSlice(vertexSlice)
+	if err != nil {
+		return nil, fmt.Errorf("bytes from slice: %w", err)
+	}
+	return &esm.Subrecord{Tag: s.Tag(), Data: outData}, nil
 }

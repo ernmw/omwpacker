@@ -22,11 +22,11 @@ func TestWNAMField_UnmarshalMarshal(t *testing.T) {
 	sub := &esm.Subrecord{Tag: WNAM, Data: data}
 
 	// --- Allocate grid for Unmarshal ---
-	grid := make([][]*ByteField, size)
+	grid := make([][]uint8, size)
 	for y := range size {
-		grid[y] = make([]*ByteField, size)
+		grid[y] = make([]uint8, size)
 		for x := range size {
-			grid[y][x] = new(ByteField)
+			grid[y][x] = 0
 		}
 	}
 
@@ -40,8 +40,8 @@ func TestWNAMField_UnmarshalMarshal(t *testing.T) {
 	// --- Verify a few sample values ---
 	for y := range 3 {
 		for x := range 3 {
-			got := *field.Heights[y][x]
-			want := ByteField(y*size + x)
+			got := field.Heights[y][x]
+			want := uint8(y*size + x)
 			if got != want {
 				t.Fatalf("Heights[%d][%d] = %d, want %d", y, x, got, want)
 			}

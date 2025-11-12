@@ -3,26 +3,31 @@ package land
 import (
 	"bytes"
 	"testing"
+	"unsafe"
 
 	"github.com/ernmw/omwpacker/esm"
+	"github.com/stretchr/testify/require"
 )
+
+func TestVCLRSize(t *testing.T) {
+	require.Equal(t, int(3), int(unsafe.Sizeof(ColorField{})))
+}
 
 func TestVCLRFieldUnmarshalMarshal(t *testing.T) {
 	const size = vclrSize
-	const depth = vclrDepth
 
 	// Prepare flat input data: sequential bytes 0..(65*65*3-1)
-	input := make([]byte, size*size*depth)
+	input := make([]byte, size*size*3)
 	for i := range input {
 		input[i] = byte(i % 128) // keep in int8 range
 	}
 
 	// Create a 65x65 grid of ColorField pointers
-	colors := make([][]*ColorField, size)
+	colors := make([][]ColorField, size)
 	for y := range size {
-		colors[y] = make([]*ColorField, size)
+		colors[y] = make([]ColorField, size)
 		for x := range size {
-			colors[y][x] = &ColorField{}
+			colors[y][x] = ColorField{}
 		}
 	}
 
@@ -39,15 +44,15 @@ func TestVCLRFieldUnmarshalMarshal(t *testing.T) {
 	for y := range 3 {
 		for x := range 3 {
 			vertex := field.Colors[y][x]
-			offset := (y*size + x) * depth
-			if vertex.GetR() != uint8(input[offset]) {
-				t.Fatalf("vertex[%d][%d].X = %d, want %d", y, x, vertex.GetR(), input[offset])
+			offset := (y*size + x) * 3
+			if vertex.R != uint8(input[offset]) {
+				t.Fatalf("vertex[%d][%d].X = %d, want %d", y, x, vertex.R, input[offset])
 			}
-			if vertex.GetG() != uint8(input[offset+1]) {
-				t.Fatalf("vertex[%d][%d].Y = %d, want %d", y, x, vertex.GetG(), input[offset+1])
+			if vertex.G != uint8(input[offset+1]) {
+				t.Fatalf("vertex[%d][%d].Y = %d, want %d", y, x, vertex.G, input[offset+1])
 			}
-			if vertex.GetB() != uint8(input[offset+2]) {
-				t.Fatalf("vertex[%d][%d].Z = %d, want %d", y, x, vertex.GetB(), input[offset+2])
+			if vertex.B != uint8(input[offset+2]) {
+				t.Fatalf("vertex[%d][%d].Z = %d, want %d", y, x, vertex.B, input[offset+2])
 			}
 		}
 	}

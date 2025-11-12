@@ -19,21 +19,20 @@ func TestVTEXField_UnmarshalMarshal(t *testing.T) {
 	}
 
 	// --- Create and fill grid ---
-	grid := make([][]*UInt16Field, size)
+	grid := make([][]uint16, size)
 	for y := range size {
-		grid[y] = make([]*UInt16Field, size)
+		grid[y] = make([]uint16, size)
 		for x := range size {
-			val := UInt16Field(y*size + x)
-			grid[y][x] = &val
+			grid[y][x] = uint16(y*size + x)
 		}
 	}
 
 	// --- Unmarshal ---
-	v := &VTEXField{Vertices: make([][]*UInt16Field, size)}
+	v := &VTEXField{Vertices: make([][]uint16, size)}
 	for y := range size {
-		v.Vertices[y] = make([]*UInt16Field, size)
+		v.Vertices[y] = make([]uint16, size)
 		for x := range size {
-			v.Vertices[y][x] = new(UInt16Field)
+			v.Vertices[y][x] = 0
 		}
 	}
 

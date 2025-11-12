@@ -3,34 +3,18 @@ package land
 import (
 	"fmt"
 
-	"unsafe"
-
 	"github.com/ernmw/omwpacker/esm"
 	"github.com/ernmw/omwpacker/esm/internal/util"
 )
 
 const wnamSize = 9
 
-type ByteField uint8
-
-func (b *ByteField) Data() []byte {
-	if b == nil {
-		return nil
-	}
-	// Return a 1-byte slice pointing to the underlying ByteField.
-	return unsafe.Slice((*byte)(b), 1)
-}
-
-func (b *ByteField) ByteSize() int {
-	return 1
-}
-
 // Heights for world map. Derived from VHGT data.
 const WNAM = esm.SubrecordTag("WNAM")
 
 // Heights for world map. Derived from VHGT data.
 type WNAMField struct {
-	Heights [][]*ByteField
+	Heights [][]uint8
 }
 
 func (s *WNAMField) Tag() esm.SubrecordTag { return WNAM }
@@ -40,9 +24,9 @@ func (s *WNAMField) Unmarshal(sub *esm.Subrecord) error {
 		return esm.ErrArgumentNil
 	}
 	var err error
-	s.Heights, err = util.GridFromBytes[*ByteField](wnamSize, wnamSize, sub.Data)
+	s.Heights, err = util.SliceAsGrid(wnamSize, sub.Data)
 	if err != nil {
-		return fmt.Errorf("parsing 2d array: %w", err)
+		return fmt.Errorf("slice as grid: %w", err)
 	}
 	return nil
 }
@@ -51,9 +35,9 @@ func (s *WNAMField) Marshal() (*esm.Subrecord, error) {
 	if s == nil {
 		return nil, nil
 	}
-	outBuff := make([]byte, 1*wnamSize*wnamSize)
-	if err := util.FlattenGrid(s.Heights, wnamSize, wnamSize, outBuff); err != nil {
-		return nil, fmt.Errorf("flatten grid: %w", err)
+	outData, err := util.GridAsSlice(s.Heights)
+	if err != nil {
+		return nil, fmt.Errorf("grid as slice: %w", err)
 	}
-	return &esm.Subrecord{Tag: s.Tag(), Data: outBuff}, nil
+	return &esm.Subrecord{Tag: s.Tag(), Data: outData}, nil
 }

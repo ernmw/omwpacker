@@ -1,54 +1,43 @@
 package util
 
-import "fmt"
+import (
+	"fmt"
+	"unsafe"
+)
 
-// SliceAsGrid views a 1D slice as a 2D grid of the given width.
-func SliceAsGrid[T any](width int, s []T) ([][]T, error) {
-	if width <= 0 {
-		return nil, fmt.Errorf("width must be positive, got %d", width)
+// SliceFromBytes fills a []T from raw data.
+// The returned []T must not change size.
+//
+// Notes on struct alignment:
+// - The offset of each field must be an integer multiple of the field's type size.
+// - The total size of the struct must be an integer multiple of the largest field's type size.
+func SliceFromBytes[T any](count int, data []uint8) ([]T, error) {
+	if count == 0 && len(data) == 0 {
+		return make([]T, 0), nil
 	}
 
-	if len(s)%width != 0 {
-		return nil, fmt.Errorf("slice length %d is not a multiple of width %d", len(s), width)
+	var zero T
+	elemSize := unsafe.Sizeof(zero)
+	if len(data)%int(elemSize) != 0 {
+		return nil, fmt.Errorf("byte slice length %d is not a multiple of element size %d", len(data), elemSize)
+	}
+	elemsNum := len(data) / int(elemSize)
+	if count != elemsNum {
+		return nil, fmt.Errorf("expected %d elements, got %d", count, elemsNum)
 	}
 
-	height := len(s) / width
-	grid := make([][]T, height)
-
-	// Manually create slice headers that all point back to the original underlying array (s)
-	for i := range height {
-		start := i * width
-		end := start + width
-		grid[i] = s[start:end]
-	}
-
-	return grid, nil
+	// Cast the byte slice to a []MyStruct using unsafe.Slice
+	// This creates a new slice header pointing to the same underlying memory
+	return unsafe.Slice((*T)(unsafe.Pointer(&data[0])), elemsNum), nil
 }
 
-// GridAsSlice flattens a 2D grid (slice of slices) into a single 1D slice.
-// This operation is NOT zero-copy because the inner slices of a [][]T are
-// not guaranteed to be contiguous in memory, and typically are not.
-func GridAsSlice[T any](grid [][]T) ([]T, error) {
-	if len(grid) == 0 {
-		return []T{}, nil
+// BytesFromSlice fills a []byte from raw data.
+// The returned []byte must not change size.
+func BytesFromSlice[T any](elems []T) ([]uint8, error) {
+	if len(elems) == 0 {
+		return make([]uint8, 0), nil
 	}
-
-	// confirm sizes are the same
-	width := len(grid[0])
-	for _, row := range grid[1:] {
-		if len(row) != width {
-			return nil, fmt.Errorf("mismatched inner slices lengths %d and %d", width, len(row))
-		}
-	}
-
-	// Copy values out.
-	result := make([]T, len(grid)*width)
-	for i, row := range grid {
-		// Determine the start index in the result slice
-		start := i * width
-		// Copy the row elements into the pre-allocated result slice
-		copy(result[start:start+width], row)
-	}
-
-	return result, nil
+	var zero T
+	elemSize := unsafe.Sizeof(zero)
+	return unsafe.Slice((*uint8)(unsafe.Pointer(&elems[0])), len(elems)*int(elemSize)), nil
 }
