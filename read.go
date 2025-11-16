@@ -116,12 +116,12 @@ func (cmd *readCmd) Run(fl *pflag.FlagSet) {
 	var plugins []string
 
 	if strings.EqualFold(filepath.Ext(inPath), ".cfg") {
-		var err error
-		plugins, _, err = cfg.OpenMWPlugins(inPath)
+		env, err := cfg.Load(inPath)
 		if err != nil {
 			fmt.Printf("💀 Failed: %q couldn't be parsed: %v\n", inPath, err)
 			os.Exit(1)
 		}
+		plugins = env.Plugins
 	} else {
 		plugins = []string{inPath}
 	}
