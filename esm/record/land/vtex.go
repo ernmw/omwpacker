@@ -9,11 +9,10 @@ import (
 
 const vtexSize = int(16)
 
-// Vertex Normals. A 65×65 array of: int8 - X, int8 - Y, int8 - Z.
-// Note that the Y-direction of the data is from the bottom up.
+// Texture Indices. Each value corresponds to the Index (INTV) value from a LTEX record.
 const VTEX = esm.SubrecordTag("VTEX")
 
-// Heights for world map. Derived from VHGT data.
+// Texture Indices. Each value corresponds to the Index (INTV) value from a LTEX record.
 type VTEXField struct {
 	Vertices [][]uint16
 }
