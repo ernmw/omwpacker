@@ -2,6 +2,7 @@
 package esm
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -132,47 +133,55 @@ func readUint32LE(b []byte) uint32 {
 	return binary.LittleEndian.Uint32(b)
 }
 
-func readNextRecord(pluginName string, f io.ReadSeeker) (*Record, error) {
-	start, _ := f.Seek(0, io.SeekCurrent)
-	hdr := make([]byte, 16)
-	n, err := io.ReadFull(f, hdr)
+func readNextRecord(headerBuffer []byte, pluginName string, br io.Reader) (*Record, error) {
+	n, err := io.ReadFull(br, headerBuffer)
 	if err == io.EOF || (err == io.ErrUnexpectedEOF && n == 0) {
-		return nil, nil // end of file
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	rec := &Record{
-		Subrecords:   []*Subrecord{},
-		PluginOffset: start,
-		PluginName:   pluginName,
-	}
-	rec.Tag = RecordTag(string(hdr[0:4]))
-	size := readUint32LE(hdr[4:8])
-	// hdr[8:12] are padding
-	rec.Flags = readUint32LE(hdr[12:16])
 
-	limit := start + 16 + int64(size)
-	for {
-		pos, _ := f.Seek(0, io.SeekCurrent)
-		if pos >= limit {
-			break
-		}
-		// read subrecord header
-		subhdr := make([]byte, 8)
-		if _, err := io.ReadFull(f, subhdr); err != nil {
-			return nil, fmt.Errorf("read subrecord header for %q: %w", rec.Tag, err)
-		}
-		tag := SubrecordTag(string(subhdr[0:4]))
-		size := readUint32LE(subhdr[4:8])
-		data := make([]byte, size)
-		if size > 0 {
-			if _, err := io.ReadFull(f, data); err != nil {
-				return nil, fmt.Errorf("read subrecord %q data (size %d) for %q: %w", tag, size, rec.Tag, err)
-			}
-		}
-		rec.Subrecords = append(rec.Subrecords, &Subrecord{Tag: tag, Data: data})
+	tag := RecordTag(string(headerBuffer[0:4]))
+	size := readUint32LE(headerBuffer[4:8])
+	flags := readUint32LE(headerBuffer[12:16])
+
+	body := make([]byte, size)
+	if _, err := io.ReadFull(br, body); err != nil {
+		return nil, fmt.Errorf("record %q: %w", tag, err)
 	}
+
+	rec := &Record{
+		Tag:        tag,
+		Flags:      flags,
+		PluginName: pluginName,
+		Subrecords: []*Subrecord{},
+		// PluginOffset can be tracked externally if needed
+	}
+
+	// Parse the body buffer without more I/O
+	pos := 0
+	for pos < int(size) {
+		if pos+8 > int(size) {
+			return nil, fmt.Errorf("corrupt subrecord header in %q", tag)
+		}
+
+		subtag := SubrecordTag(string(body[pos : pos+4]))
+		subsize := readUint32LE(body[pos+4 : pos+8])
+		pos += 8
+
+		if pos+int(subsize) > int(size) {
+			return nil, fmt.Errorf("corrupt subrecord %q in %q", subtag, tag)
+		}
+
+		sr := &Subrecord{
+			Tag:  subtag,
+			Data: body[pos : pos+int(subsize)],
+		}
+		rec.Subrecords = append(rec.Subrecords, sr)
+		pos += int(subsize)
+	}
+
 	return rec, nil
 }
 
@@ -186,14 +195,17 @@ func ParsePluginFile(path string) ([]*Record, error) {
 	}
 	defer f.Close()
 
-	return ParsePluginData(pluginName, f)
+	bufferedFile := bufio.NewReader(f)
+
+	return ParsePluginData(pluginName, bufferedFile)
 }
 
-// ParsePluginData extracts records from an io.ReadSeeker.
-func ParsePluginData(pluginName string, f io.ReadSeeker) ([]*Record, error) {
+// ParsePluginData extracts records from an io.Reader.
+func ParsePluginData(pluginName string, f io.Reader) ([]*Record, error) {
 	records := []*Record{}
+	hdr := make([]byte, 16)
 	for {
-		rec, err := readNextRecord(pluginName, f)
+		rec, err := readNextRecord(hdr, pluginName, f)
 		if err != nil {
 			return nil, err
 		}
