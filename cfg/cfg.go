@@ -1,4 +1,5 @@
 // Package cfg contains some AI Go ports of openmw configuration logic.
+// This package is a total mess, but it works.
 package cfg
 
 import (
@@ -7,7 +8,21 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 )
+
+type Environment struct {
+	// Path of the cfg.
+	Path    string
+	Plugins []string
+	BSA     []string
+	Data    []string
+	User    []string
+	Local   []string
+
+	mux        sync.Mutex
+	bsaIndices map[string]([]*entry)
+}
 
 func findRoot(cfgPath string) (string, error) {
 

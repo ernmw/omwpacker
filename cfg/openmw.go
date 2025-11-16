@@ -5,49 +5,62 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
-// OpenMWPlugins now returns resolved plugin absolute paths (searching data dirs),
+// Load now returns resolved plugin absolute paths (searching data dirs),
 // plus dataPaths (BSAs first, then folders).
-func OpenMWPlugins(path string) ([]string, []string, error) {
+func Load(path string) (*Environment, error) {
+	out := &Environment{
+		Plugins:    []string{},
+		BSA:        []string{},
+		Data:       []string{},
+		User:       []string{},
+		Local:      []string{},
+		bsaIndices: make(map[string][]*entry),
+	}
 	cfgPath, err := findRoot(path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("find root openmw.cfg file %q: %w", path, err)
+		return nil, fmt.Errorf("find root openmw.cfg file %q: %w", path, err)
 	}
+
+	out.Path = cfgPath
 
 	visited := map[string]bool{}
 	var contexts []configContext
 
 	if err := loadConfigRecursive(cfgPath, &contexts, visited); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	// Build ordered data directories list (lowest -> highest priority),
-	// and list of BSAs (lowest priority).
-	var bsaArchives []string
-	var dataDirs []string
-	var userData []string
-	var dataLocal []string
-
+	bsaBaseNames := []string{}
 	for _, ctx := range contexts {
-		bsaArchives = append(bsaArchives, ctx.bsaArchives...)
-		dataDirs = append(dataDirs, ctx.dataDirs...)
-		userData = append(userData, ctx.userData...)
-		dataLocal = append(dataLocal, ctx.dataLocal...)
+		bsaBaseNames = append(bsaBaseNames, ctx.bsaArchives...)
+		out.Data = append(out.Data, ctx.dataDirs...)
+		out.User = append(out.User, ctx.userData...)
+		out.Local = append(out.Local, ctx.dataLocal...)
 	}
-
-	// Compose dataPaths: BSAs first, then folders, then userdata, then data-local
-	dataPaths := make([]string, 0, len(bsaArchives)+len(dataDirs)+len(userData)+len(dataLocal))
-	dataPaths = append(dataPaths, bsaArchives...)
-	dataPaths = append(dataPaths, dataDirs...)
-	dataPaths = append(dataPaths, userData...)
-	dataPaths = append(dataPaths, dataLocal...)
 
 	// Resolve plugin names to absolute paths by searching dataDirs in order
-	pluginPaths := resolvePluginNames(contexts, dataDirs)
+	out.Plugins = resolvePluginNames(contexts, out.Data)
 
-	return pluginPaths, dataPaths, nil
+	// Resolve BSAs
+	bsaFound := map[string]bool{}
+	for _, dataFolder := range slices.Backward(out.Data) {
+		for _, bsa := range bsaBaseNames {
+			if bsaFound[bsa] {
+				continue
+			}
+			fp := filepath.Join(dataFolder, bsa)
+			if _, err := os.Stat(fp); err == nil {
+				bsaFound[bsa] = true
+				out.BSA = append(out.BSA, fp)
+			}
+		}
+	}
+
+	return out, nil
 }
 
 // resolvePluginNames resolves plugin names declared in contexts into absolute
@@ -200,7 +213,7 @@ func loadConfigRecursive(cfgPath string, contexts *[]configContext, visited map[
 			ctx.userData = append(ctx.userData, verifyPath(cfgPath, val))
 
 		case "fallback-archive":
-			ctx.bsaArchives = append(ctx.bsaArchives, verifyPath(cfgPath, val))
+			ctx.bsaArchives = append(ctx.bsaArchives, val)
 
 		case "content":
 			ext := strings.ToLower(filepath.Ext(val))
