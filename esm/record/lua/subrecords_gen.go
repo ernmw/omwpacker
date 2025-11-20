@@ -2,8 +2,6 @@
 package lua
 
 import (
-	"fmt"
-
 	"github.com/ernmw/omwpacker/esm"
 )
 
@@ -20,13 +18,7 @@ func (s *LUASField) Unmarshal(sub *esm.Subrecord) error {
 		return esm.ErrArgumentNil
 	}
 
-	if len(sub.Data) == 0 {
-		return fmt.Errorf("zstring subrecord has no data")
-	}
-	if sub.Data[len(sub.Data)-1] != 0 {
-		return fmt.Errorf("zstring subrecord not null-terminated")
-	}
-	s.Value = string(sub.Data[:len(sub.Data)-1])
+	s.Value = string(sub.Data)
 
 	return nil
 }
@@ -36,5 +28,5 @@ func (s *LUASField) Marshal() (*esm.Subrecord, error) {
 		return nil, nil
 	}
 
-	return &esm.Subrecord{Tag: s.Tag(), Data: append([]byte(s.Value), 0)}, nil
+	return &esm.Subrecord{Tag: s.Tag(), Data: []byte(s.Value)}, nil
 }

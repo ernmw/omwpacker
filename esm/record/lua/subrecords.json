@@ -1,7 +1,7 @@
 [
   {
     "Tag": "LUAS",
-    "Template": "zstring",
+    "Template": "cstring",
     "Comment": "VFS path to a Lua script."
   }
 ]

@@ -1,0 +1,25 @@
+// {{.Comment}}
+const {{.Tag}} esm.SubrecordTag = "{{fourCC .Tag}}"
+
+// {{.Comment}}
+type {{.Tag}}Field struct{Value string}
+
+func (t *{{.Tag}}Field) Tag() esm.SubrecordTag { return {{.Tag}} }
+
+func (s *{{.Tag}}Field) Unmarshal(sub *esm.Subrecord) error {
+	if s == nil || sub == nil {
+		return esm.ErrArgumentNil
+	}
+
+	s.Value = string(sub.Data)
+
+	return nil
+}
+
+func (s *{{.Tag}}Field) Marshal() (*esm.Subrecord, error) {
+    if s == nil {
+		return nil, nil
+	}
+
+	return &esm.Subrecord{Tag: s.Tag(), Data: []byte(s.Value)}, nil
+}
